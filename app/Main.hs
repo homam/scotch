@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import qualified WebServer
 
 main :: IO ()
-main = someFunc
+main = WebServer.main

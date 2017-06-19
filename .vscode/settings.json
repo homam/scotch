@@ -1,0 +1,6 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+  "haskell.ghcMod.executablePath": "stack",
+  "haskell.ghcMod.logLevel": "log",
+  "haskell.hlint.executablePath": "/Users/homam/.stack/snapshots/x86_64-osx/lts-8.19/8.0.2/bin/hlint"
+}
