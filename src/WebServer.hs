@@ -8,7 +8,7 @@ module WebServer (
 ) where
 
 import Control.Monad.Trans.Reader (ReaderT(..), runReaderT)
-import Control.Monad.Trans (MonadIO)
+import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader)
 -- import qualified Data.Map as M
 import Data.Text.Lazy (Text, pack, unpack)
@@ -17,6 +17,8 @@ import Web.Scotty.Trans
 import Network.Wai.Middleware.RequestLogger
 -- import qualified Data.Aeson as A
 -- import Debug.Trace (trace)
+import PostgreSQLConnectionPool (getAllVisits, myPool)
+import qualified Data.Pool as P
 
 type AppState = ()
 
@@ -31,6 +33,16 @@ app = do
     -- let list = A.decode b :: Maybe [Int]
     list <- jsonData :: ActionT Text WebM [Int]
     text $ ( pack . show . sum)  list
+
+  get "/visits" $ do
+      pool <- liftIO myPool
+      visits <- liftIO $ P.withResource pool getAllVisits
+      text $ pack (show visits)
+
+    -- let list = A.decode b :: Maybe [Int]
+    -- list <- jsonData :: ActionT Text WebM [Int]
+    -- text $ ( pack . show . sum)  list
+
 
   -- list all connections
 

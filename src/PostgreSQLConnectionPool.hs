@@ -1,18 +1,24 @@
 {-# LANGUAGE
     OverloadedStrings
   , DeriveGeneric
+  , NamedFieldPuns
 #-}
 module PostgreSQLConnectionPool (
-  main
+    main
+  , getAllVisits
+  , myPool
 ) where
 
+import Data.Maybe (fromMaybe)
 import qualified Data.Pool as P
 import Control.Monad (forM_)
 import qualified Control.Concurrent as C
 -- import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified Database.PostgreSQL.Simple as PS
-import qualified Database.PostgreSQL.Simple.ToRow (toRow)
+import Database.PostgreSQL.Simple.ToRow (toRow)
+import Database.PostgreSQL.Simple.FromRow (fromRow, field)
 import Database.PostgreSQL.Simple.ToField (toField)
+import Database.PostgreSQL.Simple.FromField (fromField, fromJSONField)
 import qualified Control.Exception as X
 import Control.Arrow ((|||))
 import qualified Control.Concurrent.STM as STM
@@ -42,6 +48,9 @@ addVisit :: PS.Connection -> IO GHC.Int.Int64
 addVisit conn = PS.execute_ conn
    "insert into visits (campaign_id, landing_page_id, ip, ip_country, headers, query_params) VALUES (1, 1, '127.0.0.1'::inet, '--', null, null);"
 
+getAllVisits :: PS.Connection -> IO [Visit]
+getAllVisits conn = PS.query_ conn "select campaign_id, landing_page_id, text(ip) as ip, ip_country, text(headers) as headers, text(query_params) as query_params from visits order by visit_id desc limit 1;"
+
 data Visit = Visit {
     campaign_id :: Int
   , landing_page_id :: Int
@@ -61,8 +70,26 @@ instance PS.ToRow Visit where
     , toField (A.toJSON $ query_params d)
     ]
 
+instance PS.FromRow Visit where
+  fromRow = do
+      campaign_id <- field
+      landing_page_id <- field
+      ip <- field
+      ip_country <- field
+      headers <- A.decode <$> field
+      query_params <- A.decode <$> field
+      return Visit {
+          campaign_id = campaign_id
+        , landing_page_id
+        , ip
+        , ip_country
+        , headers = fromMaybe M.empty headers
+        , query_params = fromMaybe M.empty query_params
+        }
+
 addVisit' :: Visit -> PS.Connection -> IO GHC.Int.Int64
-addVisit' v conn = PS.executeMany conn
+addVisit' v conn = PS.executeMany
+  conn
   "insert into visits (campaign_id, landing_page_id, ip, ip_country, headers, query_params) VALUES (?, ?, ?, ?, ?, ?);"
   [v]
 
