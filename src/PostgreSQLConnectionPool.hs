@@ -2,66 +2,57 @@
     OverloadedStrings
   , DeriveGeneric
   , NamedFieldPuns
+  , FlexibleInstances
+  , ScopedTypeVariables
 #-}
 module PostgreSQLConnectionPool (
-    main
-  , getAllVisits
+    getAllVisits
+  , addVisit
   , myPool
+  , Visit (..)
 ) where
 
 import Data.Maybe (fromMaybe)
 import qualified Data.Pool as P
-import Control.Monad (forM_)
-import qualified Control.Concurrent as C
--- import qualified Database.PostgreSQL.LibPQ as PQ
 import qualified Database.PostgreSQL.Simple as PS
 import Database.PostgreSQL.Simple.ToRow (toRow)
-import Database.PostgreSQL.Simple.FromRow (fromRow, field)
-import Database.PostgreSQL.Simple.ToField (toField)
-import Database.PostgreSQL.Simple.FromField (fromField, fromJSONField)
-import qualified Control.Exception as X
-import Control.Arrow ((|||))
-import qualified Control.Concurrent.STM as STM
-import qualified GHC.Int
+import Database.PostgreSQL.Simple.ToField (toField, ToField)
+import Database.PostgreSQL.Simple.FromField (fromField, FromField)
+import qualified Data.ByteString.Lazy as BL
+import Data.Time.Clock (UTCTime(..))
+import qualified Data.Time as Time
 import qualified Data.Aeson as A
 import qualified Data.Map as M
+import qualified System.Environment as Env
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as Char8
 import GHC.Generics (Generic)
 
--- utility function to just print the current number of open connections
-connectionCount :: IO ()
-connectionCount = do
-    conn <- PS.connectPostgreSQL "postgres://postgres:ubuntu14@95.97.146.246/postgres"
-    x <- PS.query_ conn "SELECT COUNT (*) FROM pg_stat_activity"
-    let c = PS.fromOnly . head $ (x :: [PS.Only Int]) -- cast result to typed haskell
-    PS.close conn
-    putStrLn $ "-- Connections Count = " ++ show c
+instance ToField (M.Map String String) where
+  toField = toField . A.toJSON
 
--- our SQL query functions will look like this, taking a connection and returning IO result
-randomInt :: PS.Connection -> IO Int
-randomInt conn = do
-  x <- PS.query_ conn "select round(100 * random() * random() ) :: Int"
-  let films = map PS.fromOnly (x :: [PS.Only Int]) -- cast result to typed haskell
-  return $ head films
-
-
-addVisit :: PS.Connection -> IO GHC.Int.Int64
-addVisit conn = PS.execute_ conn
-   "insert into visits (campaign_id, landing_page_id, ip, ip_country, headers, query_params) VALUES (1, 1, '127.0.0.1'::inet, '--', null, null);"
+instance FromField (M.Map String String) where
+  fromField _ Nothing = return M.empty
+  fromField _ (Just bs) = return $ fromMaybe M.empty (A.decode $ BL.fromStrict bs)
 
 getAllVisits :: PS.Connection -> IO [Visit]
-getAllVisits conn = PS.query_ conn "select campaign_id, landing_page_id, text(ip) as ip, ip_country, text(headers) as headers, text(query_params) as query_params from visits order by visit_id desc limit 1;"
+getAllVisits conn = PS.query_ conn "select visit_id, creation_time, campaign_id, landing_page_id, text(ip) as ip, ip_country, headers, query_params from visits order by visit_id desc limit 10;"
 
 data Visit = Visit {
-    campaign_id :: Int
+    visit_id :: Int
+  , creation_time :: Time.ZonedTime
+  , campaign_id :: Int
   , landing_page_id :: Int
   , ip :: String
   , ip_country :: String
-  , headers :: M.Map String String
-  , query_params :: M.Map String String
+  , headers :: Maybe (M.Map String String)
+  , query_params :: Maybe (M.Map String String)
 } deriving (Show, Generic)
 
 instance PS.ToRow Visit where
   toRow d = [
+      -- visit_id -- auto increamenting
+      -- creation_time -- auto
       toField (campaign_id d)
     , toField (landing_page_id d)
     , toField (ip d)
@@ -69,68 +60,37 @@ instance PS.ToRow Visit where
     , toField (A.toJSON $ headers d)
     , toField (A.toJSON $ query_params d)
     ]
+instance PS.FromRow Visit
 
-instance PS.FromRow Visit where
-  fromRow = do
-      campaign_id <- field
-      landing_page_id <- field
-      ip <- field
-      ip_country <- field
-      headers <- A.decode <$> field
-      query_params <- A.decode <$> field
-      return Visit {
-          campaign_id = campaign_id
-        , landing_page_id
-        , ip
-        , ip_country
-        , headers = fromMaybe M.empty headers
-        , query_params = fromMaybe M.empty query_params
-        }
+-- we want to be able to A.decode visits
+instance A.ToJSON Visit
+instance A.FromJSON Visit
 
-addVisit' :: Visit -> PS.Connection -> IO GHC.Int.Int64
-addVisit' v conn = PS.executeMany
+
+-- addVisit :: Visit -> PS.Connection -> IO GHC.Int.Int64
+addVisit v conn = PS.query
   conn
-  "insert into visits (campaign_id, landing_page_id, ip, ip_country, headers, query_params) VALUES (?, ?, ?, ?, ?, ?);"
-  [v]
-
+  "insert into visits (campaign_id, landing_page_id, ip, ip_country, headers, query_params) VALUES (?, ?, ?, ?, ?, ?) returning visit_id, creation_time;"
+  v
 
 -- create a connection pool
 -- reference: http://codeundreamedof.blogspot.nl/2015/01/a-connection-pool-for-postgresql-in.html
-myPool :: IO (P.Pool PS.Connection)
-myPool = P.createPool (PS.connectPostgreSQL "postgres://postgres:ubuntu14@95.97.146.246/postgres") PS.close 1 10 10
+myPool :: BS.ByteString -> IO (P.Pool PS.Connection)
+myPool connectionString = P.createPool (PS.connectPostgreSQL connectionString) PS.close 1 10 10
 
-test :: P.Pool PS.Connection -> IO ()
-test pool = do
-  connectionCount
-  result <- STM.atomically $ STM.newTVar ([] :: [Int])
-  errors <- STM.atomically $ STM.newTVar ([] :: [X.SomeException])
-  let x = C.forkIO $ X.try (P.withResource pool randomInt)
-          >>= (prepend errors ||| prepend result)
-  forM_ [1 .. 20] $ const x -- run x 20 times in parallel for fun
-  wait 1
-  connectionCount
-  wait 3 -- wait 3 seconds for querirs to finish
-  result' <- STM.atomically $ STM.readTVar result
-  putStrLn $ "== Result = " ++ show (sum result')
-  errors' <- STM.atomically $ STM.readTVar errors
-  mapM_ print errors' -- print errors (if any)
-  where prepend m = STM.atomically . STM.modifyTVar m . (:)
-
-
--- instance (A.ToJSON a) => A.ToJSON (M.Map a b)
---     where toJSON kvs = object [ t .= v | (k,v) <- kvs, let (A.String t) = toJSON k ]
-
-
-main :: IO ()
 main = do
-    pool <- myPool
-    -- P.withResource pool addVisit
-    P.withResource pool (addVisit' $ Visit 1 1 "127.0.0.1" "--" (M.fromList [("A", "B")]) (M.fromList []))
-    return ()
-    -- test pool
-    -- wait 15 -- our pool should have expired in 10 seconds, but it reconnects
-    -- test pool
-    -- P.destroyAllResources pool
-
-wait :: Int -> IO ()
-wait s = C.threadDelay (10^6 * s) -- utility function, wait in seconds
+  connectionString <- Env.getEnv "SCOTCH_DB"
+  pool <- myPool (Char8.pack connectionString)
+  [(newVisitId :: Int, newCreationTime :: Time.ZonedTime)] <- P.withResource pool $ addVisit Visit {
+      visit_id = 0
+    , creation_time = Time.utcToZonedTime (Time.minutesToTimeZone 120) $ UTCTime (Time.fromGregorian 2017 1 1) 0
+    , campaign_id = 1
+    , landing_page_id = 1
+    , ip = "127.0.0.1"
+    , ip_country = ""
+    , headers = Nothing
+    , query_params = Nothing
+  }
+  print $ "Record Inserted with " ++ show newVisitId ++ " at " ++ show newCreationTime
+  visits <- P.withResource pool getAllVisits
+  print $ A.encode visits

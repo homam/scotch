@@ -13,6 +13,8 @@ import Control.Monad.Reader (MonadReader)
 -- import qualified Data.Map as M
 import Data.Text.Lazy (Text, pack, unpack)
 -- import Data.Text.Lazy.Encoding (decodeUtf8)
+import qualified System.Environment as Env
+import qualified Data.ByteString.Char8 as Char8
 import Web.Scotty.Trans
 import Network.Wai.Middleware.RequestLogger
 -- import qualified Data.Aeson as A
@@ -35,7 +37,8 @@ app = do
     text $ ( pack . show . sum)  list
 
   get "/visits" $ do
-      pool <- liftIO myPool
+      connectionString <- liftIO $ Env.getEnv "SCOTCH_DB"
+      pool <- liftIO $ myPool (Char8.pack connectionString)
       visits <- liftIO $ P.withResource pool getAllVisits
       text $ pack (show visits)
 
