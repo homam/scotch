@@ -57,8 +57,8 @@ instance PS.ToRow Visit where
     , toField (landing_page_id d)
     , toField (ip d)
     , toField (ip_country d)
-    , toField (A.toJSON $ headers d)
-    , toField (A.toJSON $ query_params d)
+    , toField (headers d)
+    , toField (query_params d)
     ]
 instance PS.FromRow Visit
 

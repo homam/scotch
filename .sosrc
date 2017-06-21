@@ -1,0 +1,7 @@
+- patterns:
+  - .*\.hs$
+  - ^my-thing.cabal$
+  - ^stack.yam$
+  commands:
+  - stack build
+  - stack exec scotch-exe

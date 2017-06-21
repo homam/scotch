@@ -16,11 +16,13 @@ import Data.Text.Lazy (Text, pack, unpack)
 import qualified System.Environment as Env
 import qualified Data.ByteString.Char8 as Char8
 import Web.Scotty.Trans
-import Network.Wai.Middleware.RequestLogger
--- import qualified Data.Aeson as A
+import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import qualified Network.Wai as Wai
+import qualified Data.Aeson as A
 -- import Debug.Trace (trace)
 import PostgreSQLConnectionPool (getAllVisits, myPool)
 import qualified Data.Pool as P
+import Control.Arrow ((***))
 
 type AppState = ()
 
@@ -31,7 +33,17 @@ app :: ScottyT Text WebM ()
 app = do
   middleware logStdoutDev
 
+  get "/" $ do
+    req <- request
+    let rawPath = Wai.rawPathInfo req
+    let rawQueryString = Wai.rawQueryString req
+    let qs = map (Char8.unpack *** fmap Char8.unpack) $ Wai.queryString req
+    hs <- headers
+    json (Char8.unpack rawPath, qs , hs)
+
+
   post "/" $ do
+    -- b <- body
     -- let list = A.decode b :: Maybe [Int]
     list <- jsonData :: ActionT Text WebM [Int]
     text $ ( pack . show . sum)  list
