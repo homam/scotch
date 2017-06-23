@@ -18,6 +18,7 @@ library
   exposed-modules:     Lib
                      , WebServer
                      , PostgreSQLConnectionPool
+                     , Types
   build-depends:       base >= 4.7 && < 5
                      , postgresql-simple >= 0.5 && < 0.6
                      , resource-pool >= 0.2 && < 0.3

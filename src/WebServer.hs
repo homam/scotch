@@ -3,12 +3,15 @@
   , OverloadedStrings
   , RankNTypes
   , FlexibleContexts
+  , NamedFieldPuns
+  , ScopedTypeVariables
 #-}
 
 module WebServer (
   main
 ) where
 
+import Control.Applicative ((<|>))
 import Control.Monad.Trans.Reader (ReaderT(..), runReaderT)
 import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, lift)
@@ -17,14 +20,17 @@ import Data.Text.Lazy (Text, pack, unpack)
 -- import Data.Text.Lazy.Encoding (decodeUtf8)
 import qualified System.Environment as Env
 import qualified Data.ByteString.Char8 as Char8
-import Web.Scotty.Trans
+import Web.Scotty.Trans hiding (status)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.Wai as Wai
 import qualified Data.Aeson as A
 -- import Debug.Trace (trace)
-import PostgreSQLConnectionPool (getAllVisits, myPool, QueryRunner, runQuery)
+import PostgreSQLConnectionPool (getAllVisits, addPostback, myPool, QueryRunner, runQuery, tryRunQuery)
 import qualified Data.Pool as P
-import Control.Arrow ((***))
+import Control.Arrow ((***), (|||))
+import Data.Maybe (fromMaybe)
+import Types (Postback (..))
+import Control.Exception (SomeException)
 
 newtype AppState = AppState {
   _query :: QueryRunner IO IO
@@ -32,6 +38,9 @@ newtype AppState = AppState {
 
 query :: QueryRunner IO (ActionT Text WebM)
 query = runQuery lift _query
+
+tryQuery = tryRunQuery _query
+
 
 newtype WebM a = WebM { runWebM :: ReaderT AppState IO a }
   deriving (Applicative, Functor, Monad, MonadIO, MonadReader AppState)
@@ -63,8 +72,17 @@ app = do
     -- list <- jsonData :: ActionT Text WebM [Int]
     -- text $ ( pack . show . sum)  list
 
+  get "/postback" $ do
+    params <- params
+    pst <- Postback <$> pure 0 <*> param "transactionid" <*> param "subsid" <*> param "service" <*> (param "status" <|> pure 0)
 
-  -- list all connections
+    connectionString <- liftIO $ Env.getEnv "SCOTCH_DB"
+    pool <- liftIO $ myPool (Char8.pack connectionString)
+
+    ps <- tryQuery (addPostback pst)
+
+    text $ (pack . show ||| pack . show . head) ps
+
 
 
 

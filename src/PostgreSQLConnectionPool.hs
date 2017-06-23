@@ -13,6 +13,8 @@ module PostgreSQLConnectionPool (
   , Visit (..)
   , QueryRunner
   , runQuery
+  , tryRunQuery
+  , addPostback
 ) where
 
 import Data.Maybe (fromMaybe)
@@ -30,8 +32,10 @@ import qualified System.Environment as Env
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as Char8
 import GHC.Generics (Generic)
-import Control.Monad.Trans (MonadIO, liftIO)
-import Control.Monad.Reader (MonadReader, ask)
+import Control.Monad.Trans (MonadIO, liftIO, MonadTrans)
+import Control.Monad.Reader (MonadReader, ask, lift)
+import Control.Exception (try, SomeException)
+import Types (Postback (..))
 
 -- | Helper type synonym for specifying a monadic transformation between 'm' and 'n' monads. For example:
 -- > QueryRunner IO IO
@@ -45,6 +49,11 @@ runQuery :: (MonadIO n, MonadReader r m) => (m r -> n a) -> (a -> t -> IO b) -> 
 runQuery lift query task = do
   q <- query <$> lift ask
   liftIO $ q task
+
+tryRunQuery :: (MonadIO (t1 m), MonadReader a1 m, MonadTrans t1) => (a1 -> t -> IO a) -> t -> t1 m (Either SomeException a)
+tryRunQuery query task = do
+  runner <- query <$> lift ask
+  liftIO $ try (runner task)
 
 instance ToField (M.Map String String) where
   toField = toField . A.toJSON
@@ -85,11 +94,17 @@ instance A.ToJSON Visit
 instance A.FromJSON Visit
 
 
--- addVisit :: Visit -> PS.Connection -> IO GHC.Int.Int64
+addVisit :: (PS.FromRow r, PS.ToRow q) => q -> PS.Connection -> IO [r]
 addVisit v conn = PS.query
   conn
   "insert into visits (campaign_id, landing_page_id, ip, ip_country, headers, query_params) VALUES (?, ?, ?, ?, ?, ?) returning visit_id, creation_time;"
   v
+
+addPostback :: PS.ToRow q => q -> PS.Connection -> IO [(Int, Int)]
+addPostback pst conn = PS.query
+  conn
+  "insert into integration_payguru_billings (transactionid, subsid, service, status) VALUES (?, ?, ?, ?) returning integration_payguru_billing_id, 0;"
+  pst
 
 -- create a connection pool
 -- reference: http://codeundreamedof.blogspot.nl/2015/01/a-connection-pool-for-postgresql-in.html
