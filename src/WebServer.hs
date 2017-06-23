@@ -1,6 +1,8 @@
 {-# LANGUAGE
     GeneralizedNewtypeDeriving
   , OverloadedStrings
+  , RankNTypes
+  , FlexibleContexts
 #-}
 
 module WebServer (
@@ -9,7 +11,7 @@ module WebServer (
 
 import Control.Monad.Trans.Reader (ReaderT(..), runReaderT)
 import Control.Monad.Trans (MonadIO, liftIO)
-import Control.Monad.Reader (MonadReader)
+import Control.Monad.Reader (MonadReader, lift)
 -- import qualified Data.Map as M
 import Data.Text.Lazy (Text, pack, unpack)
 -- import Data.Text.Lazy.Encoding (decodeUtf8)
@@ -20,13 +22,18 @@ import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.Wai as Wai
 import qualified Data.Aeson as A
 -- import Debug.Trace (trace)
-import PostgreSQLConnectionPool (getAllVisits, myPool)
+import PostgreSQLConnectionPool (getAllVisits, myPool, QueryRunner, runQuery)
 import qualified Data.Pool as P
 import Control.Arrow ((***))
 
-type AppState = ()
+newtype AppState = AppState {
+  _query :: QueryRunner IO IO
+}
 
-newtype WebM a = WebM { runWebM :: ReaderT  AppState IO a }
+query :: QueryRunner IO (ActionT Text WebM)
+query = runQuery lift _query
+
+newtype WebM a = WebM { runWebM :: ReaderT AppState IO a }
   deriving (Applicative, Functor, Monad, MonadIO, MonadReader AppState)
 
 app :: ScottyT Text WebM ()
@@ -49,10 +56,8 @@ app = do
     text $ ( pack . show . sum)  list
 
   get "/visits" $ do
-      connectionString <- liftIO $ Env.getEnv "SCOTCH_DB"
-      pool <- liftIO $ myPool (Char8.pack connectionString)
-      visits <- liftIO $ P.withResource pool getAllVisits
-      text $ pack (show visits)
+    visits <- query getAllVisits
+    text $ pack (show visits)
 
     -- let list = A.decode b :: Maybe [Int]
     -- list <- jsonData :: ActionT Text WebM [Int]
@@ -65,5 +70,8 @@ app = do
 
 main :: IO ()
 main = do
-  let runActionToIO m = runReaderT (runWebM m) ()
+  connectionString <- liftIO $ Env.getEnv "SCOTCH_DB"
+  pool <- myPool (Char8.pack connectionString)
+  let appState = AppState { _query = P.withResource pool }
+  let runActionToIO m = runReaderT (runWebM m) appState
   scottyT 3000 runActionToIO app

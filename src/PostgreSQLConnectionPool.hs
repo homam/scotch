@@ -4,12 +4,15 @@
   , NamedFieldPuns
   , FlexibleInstances
   , ScopedTypeVariables
+  , RankNTypes
 #-}
 module PostgreSQLConnectionPool (
     getAllVisits
   , addVisit
   , myPool
   , Visit (..)
+  , QueryRunner
+  , runQuery
 ) where
 
 import Data.Maybe (fromMaybe)
@@ -27,6 +30,21 @@ import qualified System.Environment as Env
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as Char8
 import GHC.Generics (Generic)
+import Control.Monad.Trans (MonadIO, liftIO)
+import Control.Monad.Reader (MonadReader, ask)
+
+-- | Helper type synonym for specifying a monadic transformation between 'm' and 'n' monads. For example:
+-- > QueryRunner IO IO
+-- > QueryRunner IO (EitherT m IO)
+type QueryRunner m n = (Monad m, Monad n) => forall a. (PS.Connection -> m a) -> n a
+
+-- | Helper function for running 'QueryRunner m n' instances that are stored in Scotty reader config. Usage example:
+-- > query :: QueryRunner IO (ActionT Text WebM)
+-- > query = runQuery lift _query
+runQuery :: (MonadIO n, MonadReader r m) => (m r -> n a) -> (a -> t -> IO b) -> t -> n b
+runQuery lift query task = do
+  q <- query <$> lift ask
+  liftIO $ q task
 
 instance ToField (M.Map String String) where
   toField = toField . A.toJSON
