@@ -1,3 +1,5 @@
+CREATE TYPE async_task_status AS ENUM ('NotStarted', 'Started', 'Completed', 'Failed')
+
 CREATE TABLE visits (
   visit_id bigserial CONSTRAINT firstkey PRIMARY KEY,
   creation_time timestamp with time zone not null default now(),

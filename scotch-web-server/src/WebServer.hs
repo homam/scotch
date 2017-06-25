@@ -23,14 +23,13 @@ import qualified Data.ByteString.Char8 as Char8
 import Web.Scotty.Trans hiding (status)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.Wai as Wai
-import qualified Data.Aeson as A
+-- import qualified Data.Aeson as A
 -- import Debug.Trace (trace)
-import PostgreSQLConnectionPool (getAllVisits, addPostback, myPool, QueryRunner, runQuery, tryRunQuery)
 import qualified Data.Pool as P
 import Control.Arrow ((***), (|||))
-import Data.Maybe (fromMaybe)
-import Types (Postback (..))
-import Control.Exception (SomeException)
+import Scotch.DB.Types (Postback(..))
+import Scotch.DB.Queries (getAllVisits, addVisit, addPostback)
+import Scotch.DB.QueryHelpers (myPool, QueryRunner, runQuery, tryRunQuery)
 
 newtype AppState = AppState {
   _query :: QueryRunner IO IO
