@@ -20,6 +20,27 @@ CREATE INDEX ON visits (lower(ip_country));
 -- example
 -- insert into visits (campaign_id, landing_page_id, ip, ip_country, headers, query_params) VALUES (1, 1, '127.0.0.1'::inet, '--', null, null);
 
+---
+
+CREATE TYPE gateway_notification_type AS ENUM ('SubscriptionNotification', 'BillingNotification', 'UnsubscriptionNotification');
+CREATE TYPE gateway_connection AS ENUM ('PayGuruStandard');
+create TABLE gateway_notifications (
+  gateway_notification_id bigserial CONSTRAINT gateway_notification_id PRIMARY KEY
+, creation_time timestamp with time zone not null default now()
+, all_params json not null
+, raw_path varchar(2048) not null
+, raw_query_string varchar(4096)
+, notification_type gateway_notification_type not null
+, gateway_connection gateway_connection not null
+, task_status async_task_status not null
+, task_result varchar(4096) null
+);
+CREATE INDEX ON gateway_notifications (gateway_notification_id DESC);
+CREATE INDEX ON gateway_notifications (notification_type DESC);
+CREATE INDEX ON gateway_notifications (gateway_connection DESC);
+
+
+---
 
 CREATE TABLE integration_payguru_billings (
   integration_payguru_billing_id bigserial CONSTRAINT integration_payguru_billing_id PRIMARY KEY,

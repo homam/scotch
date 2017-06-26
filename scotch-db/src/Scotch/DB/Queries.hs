@@ -11,12 +11,15 @@ module Scotch.DB.Queries (
     getAllVisits
   , addVisit
   , addPostback
+  , addGatewayNotification
 )
 where
 
+import qualified Data.Time as Time
 import qualified Database.PostgreSQL.Simple as PS
 import Database.PostgreSQL.Simple.SqlQQ
 import Scotch.DB.Types
+import Scotch.DB.Types.GatewayNotification
 
 getAllVisits :: PS.Connection -> IO [Visit]
 getAllVisits conn = PS.query_ conn [sql|
@@ -39,3 +42,19 @@ addPostback pst conn = PS.query
     insert into integration_payguru_billings (transactionid, subsid, service, status)
     VALUES (?, ?, ?, ?) returning integration_payguru_billing_id, 0; |]
   pst
+
+addGatewayNotification :: GatewayNotification -> PS.Connection -> IO (Int, Time.ZonedTime)
+addGatewayNotification notification conn = head <$> PS.query
+  conn
+  [sql|
+    insert into gateway_notifications (
+      all_params
+    , raw_path
+    , raw_query_string
+    , notification_type
+    , gateway_connection
+    , task_status
+    , task_result
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?) returning gateway_notification_id, creation_time; |]
+  notification

@@ -28,7 +28,8 @@ import qualified Network.Wai as Wai
 import qualified Data.Pool as P
 import Control.Arrow ((|||), (***))
 import Scotch.DB.Types (Postback(..))
-import Scotch.DB.Queries (getAllVisits, addVisit, addPostback)
+import Scotch.DB.Types.GatewayNotification as GatewayNotification
+import Scotch.DB.Queries (getAllVisits, addVisit, addPostback, addGatewayNotification)
 import Scotch.DB.QueryHelpers (myPool, QueryRunner, runQuery, tryRunQuery)
 
 newtype AppState = AppState {
@@ -71,7 +72,6 @@ app = do
     ps <- tryQuery (addPostback pst)
 
     text $ (pack . show ||| pack . const "Ok") ps
-
 
 
 main :: IO ()
