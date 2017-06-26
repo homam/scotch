@@ -1,7 +1,7 @@
 - patterns:
   - src/(.*)\.hs$
-  - ^my-thing.cabal$
+  - ^scotch-db.cabal$
   - ^stack.yam$
   commands:
   - stack build
-  - stack exec scotch-exe
+  - ../scotch-web-server/rebuild.sh

@@ -52,20 +52,19 @@ defaultTime :: Time.ZonedTime
 defaultTime = Time.utcToZonedTime (Time.minutesToTimeZone 120) $ Time.UTCTime (Time.fromGregorian 2017 1 1) 0
 
 -- Usage example:
--- >>>
--- main = do
---   connectionString <- Env.getEnv "SCOTCH_DB"
---   pool <- myPool (Char8.pack connectionString)
---   [(newVisitId :: Int, newCreationTime :: Time.ZonedTime)] <- P.withResource pool $ addVisit Visit {
---       visit_id = 0
---     , creation_time = Time.utcToZonedTime (Time.minutesToTimeZone 120) $ UTCTime (Time.fromGregorian 2017 1 1) 0
---     , campaign_id = 1
---     , landing_page_id = 1
---     , ip = "127.0.0.1"
---     , ip_country = ""
---     , headers = Nothing
---     , query_params = Nothing
---   }
---   print $ "Record Inserted with " ++ show newVisitId ++ " at " ++ show newCreationTime
---   visits <- P.withResource pool getAllVisits
---   print $ A.encode visits
+-- > main = do
+-- >   connectionString <- Env.getEnv "SCOTCH_DB"
+-- >   pool <- myPool (Char8.pack connectionString)
+-- >   [(newVisitId :: Int, newCreationTime :: Time.ZonedTime)] <- P.withResource pool $ addVisit Visit {
+-- >       visit_id = 0
+-- >     , creation_time = Time.utcToZonedTime (Time.minutesToTimeZone 120) $ UTCTime (Time.fromGregorian 2017 1 1) 0
+-- >     , campaign_id = 1
+-- >     , landing_page_id = 1
+-- >     , ip = "127.0.0.1"
+-- >     , ip_country = ""
+-- >     , headers = Nothing
+-- >     , query_params = Nothing
+-- >   }
+-- >   print $ "Record Inserted with " ++ show newVisitId ++ " at " ++ show newCreationTime
+-- >   visits <- P.withResource pool getAllVisits
+-- >   print $ A.encode visits

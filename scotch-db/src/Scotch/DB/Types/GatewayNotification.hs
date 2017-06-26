@@ -3,11 +3,16 @@
   , DeriveGeneric
 #-}
 
+{-|
+Module      : Scotch.DB.Types.GatewayNotification
+Description : Represents a PostgreSQL record of a generic HTTP Postback Notification from a Gateway
+-}
 module Scotch.DB.Types.GatewayNotification (
     GatewayNotification(..)
   , makeGatewayNotification
   , NotificationType(..)
   , GatewayConnection(..)
+  , AsyncTaskStatus(..)
 )
 where
 
@@ -15,11 +20,8 @@ import Prelude hiding (concat)
 import Data.Text.Lazy (Text, fromStrict)
 import qualified Data.Text.Encoding as Encoding
 import qualified Database.PostgreSQL.Simple as PS
-import Database.PostgreSQL.Simple.ToField (toField, ToField)
-import Database.PostgreSQL.Simple.FromField (fromField, FromField)
+import Database.PostgreSQL.Simple.ToField (toField)
 import Database.PostgreSQL.Simple.ToRow (toRow)
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString.Char8 as Char8
 import qualified Data.Aeson as A
 import GHC.Generics (Generic)
 import Scotch.DB.FieldParserHelpers ()
@@ -36,50 +38,45 @@ makeGatewayNotification gatewayConnection notificationType req allParams =
         rawQueryString = Wai.rawQueryString req
         rawPath = bsToText $ Wai.rawPathInfo req
     in GatewayNotification {
-        gateway_notification_id = 0
-      , creation_time = defaultTime
+        gateway_notification_id = 0 -- auto generated value
+      , creation_time = defaultTime -- auto generated value
       , allParams = M.fromList allParams
       , rawQueryString = bsToText rawQueryString
       , rawPath = rawPath
       , notificationType = notificationType
       , gatewayConnection = gatewayConnection
+      , taskStatus = NotStarted -- default value
+      , taskResult = Nothing -- defauklt value
     }
 
 data NotificationType = SubscriptionNotification | BillingNotification | UnsubscriptionNotification
-    deriving (Show, Read, Eq, Generic, Enum)
-
-instance ToField NotificationType where
-    toField = toField . show
-instance FromField NotificationType where
-    fromField _ Nothing = error "Cannot parse Nothing"
-    fromField _ (Just bs) = return $ read $ Char8.unpack $ BL.toStrict $ BL.fromStrict bs
-
-
+  deriving (Show, Read, Eq, Generic, Enum)
 instance A.ToJSON NotificationType
 instance A.FromJSON NotificationType
 
-
 data GatewayConnection = PayGuruStandard
-    deriving (Show, Read, Eq, Generic, Enum)
-
-instance ToField GatewayConnection where
-    toField = toField . show
-instance FromField GatewayConnection where
-    fromField _ Nothing = error "Cannot parse Nothing"
-    fromField _ (Just bs) = return $ read $ Char8.unpack $ BL.toStrict $ BL.fromStrict bs
-
-
+  deriving (Show, Read, Eq, Generic, Enum)
 instance A.ToJSON GatewayConnection
 instance A.FromJSON GatewayConnection
 
+data AsyncTaskStatus = NotStarted | Started | Completed | Failed
+  deriving (Show, Read, Eq, Generic, Enum)
+instance A.ToJSON AsyncTaskStatus
+instance A.FromJSON AsyncTaskStatus
 
 -- |
 -- Example:
 --
--- > post "/:a" $ do
+-- > get "/notification" $ do
 -- >   req <- request
 -- >   allParams <- params
--- >   let requestModel = makeGatewayNotification req allParams
+-- >   let notification = makeGatewayNotification
+-- >         PayGuruStandard
+-- >         SubscriptionNotification
+-- >         req
+-- >         allParams
+-- >   res <- tryQuery (addGatewayNotification notification)
+-- >   (text . pack . show ||| json) res
 data GatewayNotification = GatewayNotification {
   gateway_notification_id :: Int
 , creation_time :: Time.ZonedTime
@@ -88,6 +85,8 @@ data GatewayNotification = GatewayNotification {
 , rawQueryString :: Text
 , notificationType :: NotificationType
 , gatewayConnection :: GatewayConnection
+, taskStatus :: AsyncTaskStatus
+, taskResult :: Maybe Text
 } deriving (Show, Generic)
 
 instance PS.ToRow GatewayNotification where
@@ -99,6 +98,8 @@ instance PS.ToRow GatewayNotification where
       , toField (rawQueryString d)
       , toField (notificationType d)
       , toField (gatewayConnection d)
+      , toField (taskStatus d)
+      , toField (taskResult d)
     ]
 instance PS.FromRow GatewayNotification
 

@@ -3,6 +3,12 @@
   , DeriveGeneric
 #-}
 
+{-|
+Module      : Scotch.DB.Types.HttpRequest
+Description : Representing a PostgreSQL record of a standard HTTP Request
+
+This module is not used anywhere at the moment.
+-}
 module Scotch.DB.Types.HttpRequest (
     HttpRequest(..)
   , makeHttpRequest
