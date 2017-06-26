@@ -19,7 +19,7 @@ library
                      , Scotch.DB.FieldParserHelpers
                      , Scotch.DB.HList
                      , Scotch.DB.Types.HttpRequest
-                     , Scotch.DB.Types.SmallHttpRequest
+                     , Scotch.DB.Types.GatewayNotification
                      , Scotch.DB.Queries
                      , Scotch.DB.QueryHelpers
   build-depends:       base >= 4.7 && < 5

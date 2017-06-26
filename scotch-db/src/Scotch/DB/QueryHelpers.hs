@@ -10,6 +10,7 @@ module Scotch.DB.QueryHelpers (
   , QueryRunner
   , runQuery
   , tryRunQuery
+  , defaultTime
 ) where
 
 import qualified Data.Pool as P
@@ -18,6 +19,8 @@ import qualified Data.ByteString as BS
 import Control.Monad.Trans (MonadIO, liftIO, MonadTrans)
 import Control.Monad.Reader (MonadReader, ask, lift)
 import Control.Exception (try, SomeException)
+import qualified Data.Time as Time
+
 
 
 -- | Helper type synonym for specifying a monadic transformation between 'm' and 'n' monads. For example:
@@ -44,6 +47,9 @@ tryRunQuery query task = do
 myPool :: BS.ByteString -> IO (P.Pool PS.Connection)
 myPool connectionString = P.createPool (PS.connectPostgreSQL connectionString) PS.close 1 10 10
 
+
+defaultTime :: Time.ZonedTime
+defaultTime = Time.utcToZonedTime (Time.minutesToTimeZone 120) $ Time.UTCTime (Time.fromGregorian 2017 1 1) 0
 
 -- Usage example:
 -- >>>
