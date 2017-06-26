@@ -16,29 +16,20 @@ import Control.Monad.Trans.Reader (ReaderT(..), runReaderT)
 import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, lift)
 -- import qualified Data.Map as M
-import Data.Text.Lazy (Text, pack, unpack)
-import qualified Data.Text.Lazy as TL
-import Data.Text.Lazy.Encoding (decodeUtf8)
-import Data.Text.Lazy (fromStrict)
-import qualified Data.Text.Encoding as Text.Encoding
+import Data.Text.Lazy (Text, pack)
 import qualified System.Environment as Env
 import qualified Data.ByteString.Char8 as Char8
-import qualified Data.ByteString.Lazy as BL
 import Web.Scotty.Trans hiding (status)
 import qualified Web.Scotty.Trans as Trans
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.Wai as Wai
-import qualified Data.Aeson as A
+-- import qualified Data.Aeson as A
 -- import Debug.Trace (trace)
 import qualified Data.Pool as P
-import Control.Arrow ((***), (|||), (+++))
+import Control.Arrow ((|||), (***))
 import Scotch.DB.Types (Postback(..))
-import qualified Scotch.DB.Types.HttpRequest as HttpRequest
 import Scotch.DB.Queries (getAllVisits, addVisit, addPostback)
 import Scotch.DB.QueryHelpers (myPool, QueryRunner, runQuery, tryRunQuery)
-import qualified Network.HTTP.Types as HTTP.Types
-import Web.Scotty (parseParam, parseParamList, Parsable)
-import Data.Maybe (fromMaybe)
 
 newtype AppState = AppState {
   _query :: QueryRunner IO IO
@@ -75,15 +66,11 @@ app = do
     -- text $ ( pack . show . sum)  list
 
   get "/postback" $ do
-    params <- params
     pst <- Postback <$> pure 0 <*> param "transactionid" <*> param "subsid" <*> param "service" <*> (param "status" <|> pure 0)
-
-    connectionString <- liftIO $ Env.getEnv "SCOTCH_DB"
-    pool <- liftIO $ myPool (Char8.pack connectionString)
 
     ps <- tryQuery (addPostback pst)
 
-    text $ (pack . show ||| pack . show . head) ps
+    text $ (pack . show ||| pack . const "Ok") ps
 
 
 

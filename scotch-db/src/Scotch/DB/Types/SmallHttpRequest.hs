@@ -3,7 +3,7 @@
   , DeriveGeneric
 #-}
 
-module Scotch.DB.Types.SmallSmallHttpRequest (
+module Scotch.DB.Types.SmallHttpRequest (
     SmallHttpRequest(..)
   , makeSmallHttpRequest
 )
