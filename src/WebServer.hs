@@ -21,6 +21,8 @@ import Data.Text.Lazy (Text, pack, unpack)
 import qualified System.Environment as Env
 import qualified Data.ByteString.Char8 as Char8
 import Web.Scotty.Trans hiding (status)
+import qualified Web.Scotty.Trans as Trans
+import Network.HTTP.Types.Status
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.Wai as Wai
 import qualified Data.Aeson as A
@@ -73,15 +75,11 @@ app = do
     -- text $ ( pack . show . sum)  list
 
   get "/postback" $ do
-    params <- params
     pst <- Postback <$> pure 0 <*> param "transactionid" <*> param "subsid" <*> param "service" <*> (param "status" <|> pure 0)
-
-    connectionString <- liftIO $ Env.getEnv "SCOTCH_DB"
-    pool <- liftIO $ myPool (Char8.pack connectionString)
 
     ps <- tryQuery (addPostback pst)
 
-    text $ (pack . show ||| pack . show . head) ps
+    text $ (pack . show ||| pack . (\_ -> "Ok")) ps
 
 
 
