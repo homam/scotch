@@ -12,6 +12,7 @@ module Scotch.DB.Queries (
   , addVisit
   , addPostback
   , addGatewayNotification
+  , getAllNotifications
 )
 where
 
@@ -58,3 +59,25 @@ addGatewayNotification notification conn = head <$> PS.query
     )
     VALUES (?, ?, ?, ?, ?, ?, ?) returning gateway_notification_id, creation_time; |]
   notification
+
+getAllNotifications :: AsyncTaskStatus -> NotificationType -> Int -> PS.Connection -> IO [GatewayNotification]
+getAllNotifications tstatus ntype limit conn = PS.query
+  conn
+  [sql|
+    select
+      gateway_notification_id
+    , creation_time
+    , all_params
+    , raw_path
+    , raw_query_string
+    , notification_type
+    , gateway_connection
+    , task_status
+    , task_result
+    from gateway_notifications
+    where task_status = ?
+      and notification_type = ?
+    order by gateway_notification_id desc
+    limit ?
+    |]
+  (tstatus, ntype, limit)
