@@ -17,19 +17,28 @@ import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, lift)
 -- import qualified Data.Map as M
 import Data.Text.Lazy (Text, pack, unpack)
--- import Data.Text.Lazy.Encoding (decodeUtf8)
+import qualified Data.Text.Lazy as TL
+import Data.Text.Lazy.Encoding (decodeUtf8)
+import Data.Text.Lazy (fromStrict)
+import qualified Data.Text.Encoding as Text.Encoding
 import qualified System.Environment as Env
 import qualified Data.ByteString.Char8 as Char8
+import qualified Data.ByteString.Lazy as BL
 import Web.Scotty.Trans hiding (status)
+import qualified Web.Scotty.Trans as Trans
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import qualified Network.Wai as Wai
--- import qualified Data.Aeson as A
+import qualified Data.Aeson as A
 -- import Debug.Trace (trace)
 import qualified Data.Pool as P
-import Control.Arrow ((***), (|||))
+import Control.Arrow ((***), (|||), (+++))
 import Scotch.DB.Types (Postback(..))
+import qualified Scotch.DB.Types.HttpRequest as HttpRequest
 import Scotch.DB.Queries (getAllVisits, addVisit, addPostback)
 import Scotch.DB.QueryHelpers (myPool, QueryRunner, runQuery, tryRunQuery)
+import qualified Network.HTTP.Types as HTTP.Types
+import Web.Scotty (parseParam, parseParamList, Parsable)
+import Data.Maybe (fromMaybe)
 
 newtype AppState = AppState {
   _query :: QueryRunner IO IO
@@ -53,15 +62,9 @@ app = do
     let rawPath = Wai.rawPathInfo req
     let rawQueryString = Wai.rawQueryString req
     let qs = map (Char8.unpack *** fmap Char8.unpack) $ Wai.queryString req
-    hs <- headers
+    hs <- Trans.headers
     json (Char8.unpack rawPath, qs , hs)
 
-
-  post "/" $ do
-    -- b <- body
-    -- let list = A.decode b :: Maybe [Int]
-    list <- jsonData :: ActionT Text WebM [Int]
-    text $ ( pack . show . sum)  list
 
   get "/visits" $ do
     visits <- query getAllVisits
@@ -81,7 +84,6 @@ app = do
     ps <- tryQuery (addPostback pst)
 
     text $ (pack . show ||| pack . show . head) ps
-
 
 
 

@@ -26,9 +26,9 @@ CREATE TABLE integration_payguru_billings (
   creation_time timestamp with time zone not null default now(),
   status smallint,
   operator smallint,
-  transactionId  varchar(50),
-  subsId  varchar(50),
-  service  varchar(50),
+  transactionId varchar(50),
+  subsId varchar(50),
+  service varchar(50),
   errorCode  varchar(50),
   errorDescription  varchar(1000),
   billingType varchar(50),
@@ -37,3 +37,15 @@ CREATE TABLE integration_payguru_billings (
 );
 CREATE UNIQUE INDEX ON integration_payguru_billings (integration_payguru_billing_id DESC);
 CREATE INDEX ON integration_payguru_billings (creation_time DESC);
+
+CREATE TABLE integration_payguru_sales (
+  integration_payguru_sale_id bigserial CONSTRAINT integration_payguru_sale_id PRIMARY KEY,
+  creation_time timestamp with time zone not null default now(),
+  transactionId varchar(50),
+  subsId varchar(50),
+  service varchar(50),
+  status smallint,
+  operator smallint, -- oId in PG-API-005-General Payment API Turkey V1.1.pdf page 25
+  processing_status async_task_status,
+  processing_updated_time timestamp with time zone not null default now(),
+)

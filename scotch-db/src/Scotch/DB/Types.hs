@@ -1,11 +1,6 @@
 {-# LANGUAGE
     OverloadedStrings
   , DeriveGeneric
-  , NamedFieldPuns
-  , FlexibleInstances
-  , ScopedTypeVariables
-  , RankNTypes
-  , QuasiQuotes
 #-}
 
 module Scotch.DB.Types (
@@ -14,25 +9,15 @@ module Scotch.DB.Types (
 )
 where
 
-import Data.Maybe (fromMaybe)
-import qualified Data.ByteString.Lazy as BL
 import qualified Database.PostgreSQL.Simple as PS
 import Database.PostgreSQL.Simple.ToRow (toRow)
-import Database.PostgreSQL.Simple.ToField (toField, ToField)
-import Database.PostgreSQL.Simple.FromField (fromField, FromField)
+import Database.PostgreSQL.Simple.ToField (toField)
 import GHC.Generics (Generic)
 import qualified Data.Aeson as A
 import qualified Data.Map as M
-import Data.Time.Clock (UTCTime(..))
 import qualified Data.Time as Time
-import Database.PostgreSQL.Simple.SqlQQ
+import Scotch.DB.FieldParserHelpers ()
 
-instance ToField (M.Map String String) where
-  toField = toField . A.toJSON
-
-instance FromField (M.Map String String) where
-  fromField _ Nothing = return M.empty
-  fromField _ (Just bs) = return $ fromMaybe M.empty (A.decode $ BL.fromStrict bs)
 
 data Visit = Visit {
     visit_id :: Int
@@ -61,6 +46,8 @@ instance PS.FromRow Visit
 -- we want to be able to A.decode visits
 instance A.ToJSON Visit
 instance A.FromJSON Visit
+
+---
 
 
 -- | PayGuruPostback
