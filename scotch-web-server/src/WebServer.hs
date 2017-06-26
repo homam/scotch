@@ -30,6 +30,7 @@ import Control.Arrow ((|||), (***))
 import Scotch.DB.Types (Postback(..))
 import Scotch.DB.Queries (getAllVisits, addVisit, addPostback)
 import Scotch.DB.QueryHelpers (myPool, QueryRunner, runQuery, tryRunQuery)
+import qualified Scotch.DB.Types.GatewayNotification as GatewayNotification
 
 newtype AppState = AppState {
   _query :: QueryRunner IO IO
@@ -71,6 +72,19 @@ app = do
     ps <- tryQuery (addPostback pst)
 
     text $ (pack . show ||| pack . const "Ok") ps
+
+  get "/notification" $ do
+    req <- request
+    allParams <- params
+    let notification = GatewayNotification.makeGatewayNotification
+          GatewayNotification.PayGuruStandard
+          GatewayNotification.SubscriptionNotification
+          req
+          allParams
+    -- res <- tryQuery (addGatewayNotification notification)
+    -- (text . pack . show ||| json) res
+
+    text $ (pack . show) notification
 
 
 
