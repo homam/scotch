@@ -50,4 +50,4 @@ instance {-# OVERLAPPABLE #-} (Show a, Enum a) => ToField a where
     toField = toField . show
 instance {-# OVERLAPPABLE #-} (Read a, Enum a) => FromField a where
     fromField _ Nothing = error "Cannot parse Nothing"
-    fromField _ (Just bs) = return $ read $ Char8.unpack $ BL.toStrict $ BL.fromStrict bs
+    fromField _ (Just bs) = return $ read $ Char8.unpack bs

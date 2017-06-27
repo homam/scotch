@@ -17,7 +17,7 @@ module Scotch.DB.Types.GatewayNotification (
 where
 
 import Prelude hiding (concat)
-import Data.Text.Lazy (Text, fromStrict)
+import Data.Text.Lazy (Text, fromStrict, toLower, concat, pack, replace)
 import qualified Data.Text.Encoding as Encoding
 import qualified Database.PostgreSQL.Simple as PS
 import Database.PostgreSQL.Simple.ToField (toField)
@@ -30,6 +30,7 @@ import qualified Network.Wai as Wai
 import qualified Data.Map as M
 import qualified Data.Time as Time
 import Scotch.DB.QueryHelpers (defaultTime)
+import qualified Web.Scotty as Scotty
 
 
 makeGatewayNotification :: GatewayConnection -> NotificationType -> Wai.Request -> [Trans.Param] -> GatewayNotification
@@ -50,14 +51,29 @@ makeGatewayNotification gatewayConnection notificationType req allParams =
     }
 
 data NotificationType = SubscriptionNotification | BillingNotification | UnsubscriptionNotification
-  deriving (Show, Read, Eq, Generic, Enum)
+  deriving (Show, Read, Eq, Generic, Enum, Bounded)
 instance A.ToJSON NotificationType
 instance A.FromJSON NotificationType
 
 data GatewayConnection = PayGuruStandard
-  deriving (Show, Read, Eq, Generic, Enum)
+  deriving (Show, Read, Eq, Generic, Enum, Bounded)
 instance A.ToJSON GatewayConnection
 instance A.FromJSON GatewayConnection
+
+instance Scotty.Parsable GatewayConnection where
+    parseParam txt =
+        let dic = M.fromList $ map (\g -> (toLower . pack . show $ g, g)) [minBound :: GatewayConnection ..]
+        in case M.lookup (toLower txt) dic of
+          Just gw -> Right gw
+          Nothing -> Left $ concat ["Unable to parse ", txt, " to a GatewayConnection"]
+
+instance Scotty.Parsable NotificationType where
+    parseParam txt =
+      let dic = M.fromList $ map (\g -> (replace "notification" "" . toLower . pack . show $ g, g)) [minBound ..]
+      in case M.lookup (toLower txt) dic of
+        Just gw -> Right gw
+        Nothing -> Left $ concat ["Unable to parse ", txt, " to a GatewayConnection"]
+
 
 data AsyncTaskStatus = NotStarted | Started | Completed | Failed
   deriving (Show, Read, Eq, Generic, Enum)

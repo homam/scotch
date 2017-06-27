@@ -5,6 +5,8 @@
   , FlexibleContexts
   , NamedFieldPuns
   , ScopedTypeVariables
+  , MultiParamTypeClasses
+  , AllowAmbiguousTypes
 #-}
 
 module WebServer (
@@ -17,6 +19,7 @@ import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, lift)
 -- import qualified Data.Map as M
 import Data.Text.Lazy (Text, pack)
+import qualified Data.Text.Lazy as Text
 import qualified System.Environment as Env
 import qualified Data.ByteString.Char8 as Char8
 import Web.Scotty.Trans hiding (status)
@@ -67,23 +70,18 @@ app = do
     -- list <- jsonData :: ActionT Text WebM [Int]
     -- text $ ( pack . show . sum)  list
 
-  get "/postback" $ do
-    pst <- Postback <$> pure 0 <*> param "transactionid" <*> param "subsid" <*> param "service" <*> (param "status" <|> pure 0)
-
-    ps <- tryQuery (addPostback pst)
-
-    text $ (pack . show ||| pack . const "Ok") ps
-
-  get "/notification" $ do
+  get "/notification/:notificationType/:gateway" $ do
     req <- request
     allParams <- params
+    notificationType :: GatewayNotification.NotificationType <- param "notificationType"
+    gateway :: GatewayNotification.GatewayConnection <- param "gateway"
+
     let notification = GatewayNotification.makeGatewayNotification
-          GatewayNotification.PayGuruStandard
-          GatewayNotification.SubscriptionNotification
+          gateway
+          notificationType
           req
           allParams
-    -- res <- tryQuery (addGatewayNotification notification)
-    -- (text . pack . show ||| json) res
+    res <- tryQuery (addGatewayNotification notification)
 
     text $ (pack . show) notification
 
@@ -95,3 +93,14 @@ main = do
   let appState = AppState { _query = P.withResource pool }
   let runActionToIO m = runReaderT (runWebM m) appState
   scottyT 3000 runActionToIO app
+
+
+---
+
+newtype LandingPage = LandingPage Text
+
+getFlow :: GatewayNotification.GatewayConnection -> LandingPage -> ActionT Text WebM ()
+getFlow GatewayNotification.PayGuruStandard (LandingPage lp) = do
+    req <- request
+    let ip = Wai.remoteHost req
+    redirect $ Text.concat ["http://www.something.com/", lp]
