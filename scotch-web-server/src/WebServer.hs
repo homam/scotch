@@ -17,7 +17,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Trans.Reader (ReaderT(..), runReaderT)
 import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, lift)
--- import qualified Data.Map as M
+import qualified Data.Map as M
 import Data.Text.Lazy (Text, pack)
 import qualified Data.Text.Lazy as Text
 import qualified System.Environment as Env
@@ -30,11 +30,14 @@ import qualified Network.Wai as Wai
 -- import Debug.Trace (trace)
 import qualified Data.Pool as P
 import Control.Arrow ((|||), (***))
-import Scotch.DB.Types (Postback(..))
+import Scotch.DB.Types (Postback(..), LandingPage(..))
 import Scotch.DB.Types.GatewayNotification as GatewayNotification
 import Scotch.DB.Queries (getAllVisits, addVisit, addPostback, addGatewayNotification)
 import Scotch.DB.QueryHelpers (myPool, QueryRunner, runQuery, tryRunQuery)
 import qualified Scotch.DB.Types.GatewayNotification as GatewayNotification
+import Scotch.DB.Gateways (IsGateway(..), AllGateways(..))
+import Scotch.DB.Gateways.PayGuruGateway
+import Scotch.DB.Gateways.TestGateway
 
 newtype AppState = AppState {
   _query :: QueryRunner IO IO
@@ -70,6 +73,16 @@ app = do
     -- list <- jsonData :: ActionT Text WebM [Int]
     -- text $ ( pack . show . sum)  list
 
+  get "/visit/:gateway/:landingpage" $ do
+    gateway :: GatewayNotification.GatewayConnection <- param "gateway"
+    landingPage <- LandingPage <$> param "landingpage"
+    -- getFlow gateway lanidngPage `rescue` (\e -> do
+    --         liftIO $ print e
+    --         text "some error"
+    --     )
+    let x = getGateway gateway
+    getFlow' x landingPage
+
   get "/notification/:notificationType/:gateway" $ do
     req <- request
     allParams <- params
@@ -95,12 +108,15 @@ main = do
   scottyT 3000 runActionToIO app
 
 
----
+getGateway :: GatewayNotification.GatewayConnection -> AllGateways
+getGateway GatewayNotification.PayguruTurkey = PayGuru PayGuruGateway { payGuruEndPointUrl = "http://.com", payGuruUsername = "pguname" }
+getGateway GatewayNotification.TestStandard = Test TestGateway
 
-newtype LandingPage = LandingPage Text
+-- newtype LandingPage = LandingPage Text
 
-getFlow :: GatewayNotification.GatewayConnection -> LandingPage -> ActionT Text WebM ()
-getFlow GatewayNotification.PayGuruStandard (LandingPage lp) = do
-    req <- request
-    let ip = Wai.remoteHost req
-    redirect $ Text.concat ["http://www.something.com/", lp]
+-- getFlow :: GatewayNotification.GatewayConnection -> LandingPage -> ActionT Text WebM ()
+-- getFlow GatewayNotification.PayGuruStandard (LandingPage lp) = do
+--     req <- request
+--     let ip = Wai.remoteHost req
+--     -- redirect $ Text.concat ["http://www.something.com/", lp]
+--     raise "Some error"

@@ -22,6 +22,10 @@ library
                      , Scotch.DB.Types.GatewayNotification
                      , Scotch.DB.Queries
                      , Scotch.DB.QueryHelpers
+                     , Scotch.DB.Gateways
+                     , Scotch.DB.Gateways.PayGuruGateway
+                     , Scotch.DB.Gateways.TestGateway
+                     , Scotch.DB.IsGateway
   build-depends:       base >= 4.7 && < 5
                      , containers >= 0.5 && < 0.6
                      , postgresql-simple >= 0.5 && < 0.6
