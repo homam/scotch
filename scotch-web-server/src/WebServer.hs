@@ -109,7 +109,7 @@ main = do
 
 
 getGateway :: GatewayNotification.GatewayConnection -> AllGateways
-getGateway GatewayNotification.PayGuruStandard = PayGuru PayGuruGateway { payGuruEndPointUrl = "http://.com", payGuruUsername = "pguname" }
+getGateway GatewayNotification.PayguruTurkey = PayGuru PayGuruGateway { payGuruEndPointUrl = "http://.com", payGuruUsername = "pguname" }
 getGateway GatewayNotification.TestStandard = Test TestGateway
 
 -- newtype LandingPage = LandingPage Text

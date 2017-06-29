@@ -22,4 +22,4 @@ data PayGuruGateway = PayGuruGateway {
 instance IsGateway PayGuruGateway where
     getFlow' _ _ = text "pay flow"
     processNotification pg _ = print (payGuruUsername pg)
-    identifier _ = GatewayNotification.PayGuruStandard
+    identifier _ = GatewayNotification.PayguruTurkey
