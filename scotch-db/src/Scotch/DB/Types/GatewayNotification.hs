@@ -55,7 +55,7 @@ data NotificationType = SubscriptionNotification | BillingNotification | Unsubsc
 instance A.ToJSON NotificationType
 instance A.FromJSON NotificationType
 
-data GatewayConnection = PayGuruStandard
+data GatewayConnection = PayGuruStandard | TestStandard
   deriving (Show, Read, Eq, Generic, Enum, Bounded)
 instance A.ToJSON GatewayConnection
 instance A.FromJSON GatewayConnection

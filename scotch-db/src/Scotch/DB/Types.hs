@@ -6,6 +6,7 @@
 module Scotch.DB.Types (
     Visit(..)
   , Postback(..)
+  , LandingPage(..)
 )
 where
 
@@ -17,6 +18,7 @@ import qualified Data.Aeson as A
 import qualified Data.Map as M
 import qualified Data.Time as Time
 import Scotch.DB.FieldParserHelpers ()
+import Data.Text.Lazy (Text)
 
 
 data Visit = Visit {
@@ -70,3 +72,5 @@ instance PS.FromRow Postback
 
 instance A.ToJSON Postback
 instance A.FromJSON Postback
+
+newtype LandingPage = LandingPage Text
