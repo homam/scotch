@@ -72,7 +72,7 @@ instance Scotty.Parsable NotificationType where
       let dic = M.fromList $ map (\g -> (replace "notification" "" . toLower . pack . show $ g, g)) [minBound ..]
       in case M.lookup (toLower txt) dic of
         Just gw -> Right gw
-        Nothing -> Left $ concat ["Unable to parse ", txt, " to a GatewayConnection"]
+        Nothing -> Left $ concat ["Unable to parse ", txt, " to a NotificationType"]
 
 
 data AsyncTaskStatus = NotStarted | Started | Completed | Failed
