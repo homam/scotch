@@ -13,6 +13,7 @@ module Scotch.DB.Queries (
   , addPostback
   , addGatewayNotification
   , getAllNotifications
+  , updateANotification
 )
 where
 
@@ -74,6 +75,7 @@ getAllNotifications tstatus ntype limit conn = PS.query
     , gateway_connection
     , task_status
     , task_result
+    , task_last_updated_time
     from gateway_notifications
     where task_status = ?
       and notification_type = ?
@@ -81,3 +83,16 @@ getAllNotifications tstatus ntype limit conn = PS.query
     limit ?
     |]
   (tstatus, ntype, limit)
+
+updateANotification :: GatewayNotification -> PS.Connection -> IO ()
+updateANotification n conn = const () <$> (PS.execute
+    conn
+    [sql|
+      update gateway_notifications SET
+        task_status = ?
+      , task_result = ?
+      , task_last_updated_time = now()
+      where gateway_notification_id = ?
+      |]
+    (taskStatus n, taskResult n, gateway_notification_id n)
+  )

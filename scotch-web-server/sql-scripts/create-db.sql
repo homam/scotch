@@ -34,6 +34,7 @@ create TABLE gateway_notifications (
 , gateway_connection gateway_connection not null
 , task_status async_task_status not null
 , task_result varchar(4096) null
+, task_last_updated_time timestamp with time zone null
 );
 CREATE INDEX ON gateway_notifications (gateway_notification_id DESC);
 CREATE INDEX ON gateway_notifications (notification_type DESC);

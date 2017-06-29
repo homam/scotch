@@ -48,6 +48,7 @@ makeGatewayNotification gatewayConnection notificationType req allParams =
       , gatewayConnection = gatewayConnection
       , taskStatus = NotStarted -- default value
       , taskResult = Nothing -- defauklt value
+      , taskLastUpdatedTime = Nothing
     }
 
 data NotificationType = SubscriptionNotification | BillingNotification | UnsubscriptionNotification
@@ -103,6 +104,7 @@ data GatewayNotification = GatewayNotification {
 , gatewayConnection :: GatewayConnection
 , taskStatus :: AsyncTaskStatus
 , taskResult :: Maybe Text
+, taskLastUpdatedTime :: Maybe Time.ZonedTime
 } deriving (Show, Generic)
 
 instance PS.ToRow GatewayNotification where
@@ -116,6 +118,7 @@ instance PS.ToRow GatewayNotification where
       , toField (gatewayConnection d)
       , toField (taskStatus d)
       , toField (taskResult d)
+      , toField (taskLastUpdatedTime d)
     ]
 instance PS.FromRow GatewayNotification
 

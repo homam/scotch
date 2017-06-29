@@ -1,0 +1,56 @@
+name:                scotch-workers
+version:             0.1.0.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/githubuser/scotch-workers#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Author name here
+maintainer:          example@example.com
+copyright:           2017 Author name here
+category:            Web
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Scotch.Workers.Lib
+  build-depends:       base >= 4.7 && < 5
+                     , containers >= 0.5 && < 0.6
+                     , postgresql-simple >= 0.5 && < 0.6
+                     , resource-pool >= 0.2 && < 0.3
+                     , transformers >= 0.4 && < 0.6
+                     , mtl >= 2.2 && < 2.3
+                     , text >= 1.2 && < 1.3
+                     , bytestring >= 0.9
+                     , aeson >= 1.0 && < 1.1
+                     , time >= 1.2 && < 1.9
+                     , http-types >= 0.9 && < 1.0
+                     , scotty >= 0.11
+                     , wai >= 3.2 && < 4
+                     , wai-extra >= 3.0 && < 3.1
+                     , async >= 2.0 && < 2.2
+                     , scotch-db
+  default-language:    Haskell2010
+
+-- executable scotch-workers-exe
+--   hs-source-dirs:      app
+--   main-is:             Main.hs
+--   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+--   build-depends:       base
+--                      , scotch-workers
+--   default-language:    Haskell2010
+
+test-suite scotch-workers-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , scotch-workers
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/githubuser/scotch-workers

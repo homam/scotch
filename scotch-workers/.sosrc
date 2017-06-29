@@ -4,5 +4,3 @@
   - ^stack.yam$
   commands:
   - stack build
-  - ../scotch-web-server/rebuild.sh
-  - ../scotch-workers/rebuild.sh
