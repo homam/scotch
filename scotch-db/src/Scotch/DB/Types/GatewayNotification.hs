@@ -1,6 +1,8 @@
 {-# LANGUAGE
     OverloadedStrings
   , DeriveGeneric
+  , FlexibleInstances
+  , UndecidableInstances
 #-}
 
 {-|
@@ -30,6 +32,7 @@ import qualified Network.Wai as Wai
 import qualified Data.Map as M
 import qualified Data.Time as Time
 import Scotch.DB.QueryHelpers (defaultTime)
+import Scotch.DB.Types.GatewayConnection
 import qualified Web.Scotty as Scotty
 
 
@@ -55,18 +58,6 @@ data NotificationType = SubscriptionNotification | BillingNotification | Unsubsc
   deriving (Show, Read, Eq, Generic, Enum, Bounded)
 instance A.ToJSON NotificationType
 instance A.FromJSON NotificationType
-
-data GatewayConnection = PayguruTurkey | TestStandard
-  deriving (Show, Read, Eq, Generic, Enum, Bounded)
-instance A.ToJSON GatewayConnection
-instance A.FromJSON GatewayConnection
-
-instance Scotty.Parsable GatewayConnection where
-    parseParam txt =
-        let dic = M.fromList $ map (\g -> (toLower . pack . show $ g, g)) [minBound :: GatewayConnection ..]
-        in case M.lookup (toLower txt) dic of
-          Just gw -> Right gw
-          Nothing -> Left $ concat ["Unable to parse ", txt, " to a GatewayConnection"]
 
 instance Scotty.Parsable NotificationType where
     parseParam txt =
@@ -124,15 +115,3 @@ instance PS.FromRow GatewayNotification
 
 instance A.ToJSON GatewayNotification
 instance A.FromJSON GatewayNotification
-
----
-
--- process :: GatewayNotification -> IO ()
--- process notification = case gatewayConnection notification of
---     PayGuruStandard -> processPayGuruNotification notification
---
--- processPayGuruNotification :: GatewayNotification -> IO ()
--- processPayGuruNotification n = case notificationType n of
---     SubscriptionNotification -> return ()
---     BillingNotification -> return ()
---     _ -> return ()

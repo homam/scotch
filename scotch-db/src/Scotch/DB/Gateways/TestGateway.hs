@@ -16,6 +16,6 @@ import Scotch.DB.Types.GatewayNotification as GatewayNotification
 data TestGateway = TestGateway
 
 instance IsGateway TestGateway where
-    getFlow' _ (LandingPage lp) = text lp
+    handleVisit _ (LandingPage lp) = text lp >> return RedirectToPaymentPage
     processNotification _ _ = undefined
     identifier _ = GatewayNotification.TestStandard

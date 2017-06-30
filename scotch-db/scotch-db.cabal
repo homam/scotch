@@ -16,10 +16,13 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Scotch.DB.Types
-                     , Scotch.DB.FieldParserHelpers
-                     , Scotch.DB.HList
                      , Scotch.DB.Types.HttpRequest
                      , Scotch.DB.Types.GatewayNotification
+                     , Scotch.DB.Types.GatewayConnection
+                     , Scotch.DB.Types.Visit
+                     , Scotch.DB.FieldParserHelpers
+                     , Scotch.DB.ParsableHelpers
+                     , Scotch.DB.HList
                      , Scotch.DB.Queries
                      , Scotch.DB.QueryHelpers
                      , Scotch.DB.Gateways
@@ -40,6 +43,7 @@ library
                      , scotty >= 0.11
                      , wai >= 3.2 && < 4
                      , wai-extra >= 3.0 && < 3.1
+                     , case-insensitive >= 1.1 && <= 1.5
   default-language:    Haskell2010
   ghc-options:         -W -threaded -rtsopts -with-rtsopts=-N
 

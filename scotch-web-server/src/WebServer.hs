@@ -30,11 +30,12 @@ import qualified Network.Wai as Wai
 -- import Debug.Trace (trace)
 import qualified Data.Pool as P
 import Control.Arrow ((|||), (***))
-import Scotch.DB.Types (Postback(..), LandingPage(..))
-import Scotch.DB.Types.GatewayNotification as GatewayNotification
-import Scotch.DB.Queries (getAllVisits, addVisit, addPostback, addGatewayNotification)
+import Scotch.DB.Queries (getAllVisits, addVisit, addGatewayNotification)
 import Scotch.DB.QueryHelpers (myPool, QueryRunner, runQuery, tryRunQuery)
-import qualified Scotch.DB.Types.GatewayNotification as GatewayNotification
+import Scotch.DB.Types.GatewayNotification
+import Scotch.DB.Types.GatewayConnection
+import qualified Scotch.DB.Types.Visit as Visit
+import Scotch.DB.Types (LandingPage(..))
 import Scotch.DB.Gateways (IsGateway(..), AllGateways(..))
 import Scotch.DB.Gateways.PayGuruGateway
 import Scotch.DB.Gateways.TestGateway
@@ -73,23 +74,30 @@ app = do
     -- list <- jsonData :: ActionT Text WebM [Int]
     -- text $ ( pack . show . sum)  list
 
-  get "/visit/:gateway/:landingpage" $ do
-    gateway :: GatewayNotification.GatewayConnection <- param "gateway"
+  get "/visit/:campaignId/:gateway/:landingpage" $ do
+    gateway :: GatewayConnection <- param "gateway"
     landingPage <- LandingPage <$> param "landingpage"
-    -- getFlow gateway lanidngPage `rescue` (\e -> do
-    --         liftIO $ print e
-    --         text "some error"
-    --     )
-    let x = getGateway gateway
-    getFlow' x landingPage
+    optInMethod <- handleVisit (getGateway gateway) landingPage
+
+    visit <- Visit.makeVisit (Just gateway) <$> (Visit.CampaignId <$> param "campaignId") <*> pure landingPage <*> request <*> pure optInMethod
+
+    -- liftIO $ putStrLn "hello"
+    res <- tryQuery (addVisit visit)
+
+    liftIO $ print res
+
+    -- liftIO $ print res
+
+    return ()
+
 
   get "/notification/:notificationType/:gateway" $ do
     req <- request
     allParams <- params
-    notificationType :: GatewayNotification.NotificationType <- param "notificationType"
-    gateway :: GatewayNotification.GatewayConnection <- param "gateway"
+    notificationType :: NotificationType <- param "notificationType"
+    gateway :: GatewayConnection <- param "gateway"
 
-    let notification = GatewayNotification.makeGatewayNotification
+    let notification = makeGatewayNotification
           gateway
           notificationType
           req
@@ -108,9 +116,9 @@ main = do
   scottyT 3000 runActionToIO app
 
 
-getGateway :: GatewayNotification.GatewayConnection -> AllGateways
-getGateway GatewayNotification.PayguruTurkey = PayGuru PayGuruGateway { payGuruEndPointUrl = "http://.com", payGuruUsername = "pguname" }
-getGateway GatewayNotification.TestStandard = Test TestGateway
+getGateway :: GatewayConnection -> AllGateways
+getGateway PayguruTurkey = PayGuru PayGuruGateway { payGuruEndPointUrl = "http://.com", payGuruUsername = "pguname" }
+getGateway TestStandard = Test TestGateway
 
 -- newtype LandingPage = LandingPage Text
 

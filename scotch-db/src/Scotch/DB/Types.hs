@@ -4,73 +4,52 @@
 #-}
 
 module Scotch.DB.Types (
-    Visit(..)
-  , Postback(..)
+    module Scotch.DB.Types
   , LandingPage(..)
+  , CampaignId(..)
+  , OptInMethod(..)
 )
 where
 
-import qualified Database.PostgreSQL.Simple as PS
-import Database.PostgreSQL.Simple.ToRow (toRow)
-import Database.PostgreSQL.Simple.ToField (toField)
+import Prelude hiding (concat)
+import Scotch.DB.FieldParserHelpers ()
+import Scotch.DB.ParsableHelpers ()
+import Data.Text.Lazy (Text, fromStrict, unpack)
+import Database.PostgreSQL.Simple.ToField (toField, ToField)
+import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(..))
+import qualified Data.Text.Encoding as Encoding
 import GHC.Generics (Generic)
 import qualified Data.Aeson as A
-import qualified Data.Map as M
-import qualified Data.Time as Time
-import Scotch.DB.FieldParserHelpers ()
-import Data.Text.Lazy (Text)
 
 
-data Visit = Visit {
-    visit_id :: Int
-  , creation_time :: Time.ZonedTime
-  , campaign_id :: Int
-  , landing_page_id :: Int
-  , ip :: String
-  , ip_country :: String
-  , headers :: Maybe (M.Map String String)
-  , query_params :: Maybe (M.Map String String)
-} deriving (Show, Generic)
+newtype LandingPage = LandingPage Text deriving (Show, Read, Generic)
 
-instance PS.ToRow Visit where
-  toRow d = [
-      -- visit_id -- auto increamenting
-      -- creation_time -- auto
-      toField (campaign_id d)
-    , toField (landing_page_id d)
-    , toField (ip d)
-    , toField (ip_country d)
-    , toField (headers d)
-    , toField (query_params d)
-    ]
-instance PS.FromRow Visit
+instance A.ToJSON LandingPage
+instance A.FromJSON LandingPage
 
--- we want to be able to A.decode visits
-instance A.ToJSON Visit
-instance A.FromJSON Visit
-
----
+instance ToField LandingPage where
+  toField (LandingPage lp) = toField lp
+instance FromField LandingPage where
+  fromField f Nothing = returnError UnexpectedNull f ""
+  fromField _ (Just bs) = return $ LandingPage (fromStrict $ Encoding.decodeUtf8 bs)
 
 
--- | PayGuruPostback
-data Postback = Postback {
-      integration_payguru_billing_id :: Int
-    , transactionid :: String
-    , subsid :: String
-    , service :: String
-    , status :: Int
-} deriving (Show, Generic)
+newtype CampaignId = CampaignId Int deriving (Show, Read, Generic)
 
-instance PS.ToRow Postback where
-  toRow d = [
-      toField (transactionid d)
-    , toField (subsid d)
-    , toField (service d)
-    , toField (status d)
-    ]
-instance PS.FromRow Postback
+instance A.ToJSON CampaignId
+instance A.FromJSON CampaignId
 
-instance A.ToJSON Postback
-instance A.FromJSON Postback
+instance ToField CampaignId where
+  toField (CampaignId lp) = toField lp
+instance FromField CampaignId where
+  fromField f Nothing = returnError UnexpectedNull f ""
+  fromField f (Just bs) = case reads $ unpack $ fromStrict $ Encoding.decodeUtf8 bs of
+    (c, _):_ -> return $ CampaignId c
+    [] -> returnError ConversionFailed f ""
 
-newtype LandingPage = LandingPage Text
+
+data OptInMethod = RedirectToPaymentPage
+  deriving (Show, Read, Eq, Generic, Enum, Bounded)
+
+instance A.ToJSON OptInMethod
+instance A.FromJSON OptInMethod

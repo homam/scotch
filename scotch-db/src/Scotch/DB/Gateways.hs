@@ -11,15 +11,15 @@ import Scotch.DB.Gateways.PayGuruGateway
 import Scotch.DB.Gateways.TestGateway
 
 data AllGateways =
-        PayGuru PayGuruGateway
-    |   Test TestGateway
+    PayGuru PayGuruGateway
+  | Test TestGateway
 
 instance IsGateway AllGateways where
-    getFlow' (PayGuru g) = getFlow' g
-    getFlow' (Test g) = getFlow' g
+  handleVisit (PayGuru g) = handleVisit g
+  handleVisit (Test g) = handleVisit g
 
-    processNotification (PayGuru g) = processNotification g
-    processNotification (Test g) = processNotification g
+  processNotification (PayGuru g) = processNotification g
+  processNotification (Test g) = processNotification g
 
-    identifier (PayGuru g) = identifier g
-    identifier (Test g) = identifier g
+  identifier (PayGuru g) = identifier g
+  identifier (Test g) = identifier g
