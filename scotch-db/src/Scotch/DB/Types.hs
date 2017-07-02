@@ -8,6 +8,7 @@ module Scotch.DB.Types (
   , LandingPage(..)
   , CampaignId(..)
   , OptInMethod(..)
+  , ServiceId(..)
 )
 where
 
@@ -33,8 +34,16 @@ instance FromField LandingPage where
   fromField f Nothing = returnError UnexpectedNull f ""
   fromField _ (Just bs) = return $ LandingPage (fromStrict $ Encoding.decodeUtf8 bs)
 
+---
 
-newtype CampaignId = CampaignId Int deriving (Show, Read, Generic)
+fromFieldN _ _ f Nothing = returnError UnexpectedNull f ""
+fromFieldN ctor cast f (Just bs) = case cast $ unpack $ fromStrict $ Encoding.decodeUtf8 bs of
+  (c, _):_ -> return $ ctor c
+  [] -> returnError ConversionFailed f ""
+
+
+-- | CampaignId
+newtype CampaignId = CampaignId Int deriving (Show, Read, Generic, Eq, Ord)
 
 instance A.ToJSON CampaignId
 instance A.FromJSON CampaignId
@@ -46,6 +55,19 @@ instance FromField CampaignId where
   fromField f (Just bs) = case reads $ unpack $ fromStrict $ Encoding.decodeUtf8 bs of
     (c, _):_ -> return $ CampaignId c
     [] -> returnError ConversionFailed f ""
+
+-- | ServiceId
+
+newtype ServiceId = ServiceId String deriving (Show, Read, Generic)
+
+instance A.ToJSON ServiceId
+instance A.FromJSON ServiceId
+
+instance ToField ServiceId where
+  toField (ServiceId s) = toField s
+instance FromField ServiceId where
+  fromField f Nothing = returnError UnexpectedNull f ""
+  fromField _ (Just bs) = return $ ServiceId $ unpack $ fromStrict $ Encoding.decodeUtf8 bs
 
 
 data OptInMethod = RedirectToPaymentPage

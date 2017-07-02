@@ -21,7 +21,7 @@ import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultE
 import qualified Data.ByteString.Lazy as BL
 
 data GatewayConnection = PayguruTurkey | TestStandard
-  deriving (Show, Read, Eq, Generic, Enum, Bounded)
+  deriving (Show, Read, Eq, Ord, Generic, Enum, Bounded)
 
 instance A.ToJSON GatewayConnection
 instance A.FromJSON GatewayConnection

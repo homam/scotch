@@ -2,6 +2,9 @@ CREATE TYPE async_task_status AS ENUM ('NotStarted', 'Started', 'Completed', 'Fa
 CREATE TYPE gateway_notification_type AS ENUM ('SubscriptionNotification', 'BillingNotification', 'UnsubscriptionNotification');
 CREATE TYPE gateway_connection AS ENUM ('PayguruTurkey');
 CREATE TYPE opt_in_method as ENUM ('RedirectToPaymentPage');
+CREATE TYPE pixel_state as ENUM ('NotProcessed', 'Cancelled', 'Scrubbed', 'UrlGenerationFailed', 'FiredAndSucceed', 'FiredAndFailed', 'Delayed');
+
+
 
 CREATE TABLE visits (
   visit_id bigserial CONSTRAINT firstkey PRIMARY KEY,
@@ -24,7 +27,24 @@ CREATE INDEX ON visits (campaign_id);
 CREATE INDEX ON visits (landing_page);
 CREATE INDEX ON visits (lower(ip_country));
 
-UPDATE pg_enum SET enumlabel = 'PayguruTurkey' WHERE enumtypid = 'gateway_connection'::regtype AND enumlabel = 'PayGuruStandard';
+
+create TABLE pixels (
+  creation_time timestamp with time zone not null default now()
+, last_updated timestamp with time zone
+, subscriber_id bigint not null
+, visit_id bigint
+, pixel_state pixel_state not null
+, pixel_url varchar(2048)
+, query_params json
+, pixel_value decimal
+, pixel_result_status_code int
+, pixel_resul_text varchar(2048)
+);
+CREATE UNIQUE INDEX ON pixels (subscriber_id DESC);
+CREATE INDEX ON pixels (creation_time DESC);
+CREATE INDEX ON pixels (pixel_state);
+
+--- UPDATE pg_enum SET enumlabel = 'PayguruTurkey' WHERE enumtypid = 'gateway_connection'::regtype AND enumlabel = 'PayGuruStandard';
 
 
 -- example

@@ -35,6 +35,7 @@ import Scotch.DB.QueryHelpers (myPool, QueryRunner, runQuery, tryRunQuery)
 import Scotch.DB.Types.GatewayNotification
 import Scotch.DB.Types.GatewayConnection
 import qualified Scotch.DB.Types.Visit as Visit
+import qualified Scotch.DB.Types.Pixel as Pixel
 import Scotch.DB.Types (LandingPage(..))
 import Scotch.DB.Gateways (IsGateway(..), AllGateways(..))
 import Scotch.DB.Gateways.PayGuruGateway
@@ -106,10 +107,9 @@ app = do
 
     text $ (pack . show) notification
 
-
 main :: IO ()
 main = do
-  connectionString <- liftIO $ Env.getEnv "SCOTCH_DB"
+  connectionString <- Env.getEnv "SCOTCH_DB"
   pool <- myPool (Char8.pack connectionString)
   let appState = AppState { _query = P.withResource pool }
   let runActionToIO m = runReaderT (runWebM m) appState
