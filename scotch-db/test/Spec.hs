@@ -1,2 +1,5 @@
+-- import qualified Test.Hspec as H
+import qualified TestPixelValues
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = TestPixelValues.main

@@ -12,13 +12,8 @@ module Scotch.DB.Types.Visit (
 where
 
 import Prelude hiding (concat)
-import qualified Database.PostgreSQL.Simple as PS
-import Database.PostgreSQL.Simple.ToRow (toRow)
-import Database.PostgreSQL.Simple.ToField (toField)
-import GHC.Generics (Generic)
-import qualified Data.Aeson as A
+import Scotch.DB.Types.Imports
 import qualified Data.Map as M
-import qualified Data.Time as Time
 import Data.Text.Lazy (Text, fromStrict)
 import qualified Network.Wai as Wai
 import qualified Data.Text.Encoding as Encoding
@@ -27,7 +22,6 @@ import Scotch.DB.FieldParserHelpers ()
 import Scotch.DB.ParsableHelpers ()
 import Scotch.DB.Types.GatewayConnection
 import Scotch.DB.Types (LandingPage(..), CampaignId(..), OptInMethod(..))
-import Scotch.DB.QueryHelpers (defaultTime)
 import Control.Arrow ((***))
 import Data.Maybe (fromMaybe)
 import Control.Monad (msum)
@@ -58,7 +52,7 @@ makeVisit gatewayConnection campaignId landingPage req optInMethod =
 
 data Visit = Visit {
     visitId :: Int
-  , creationTime :: Time.ZonedTime
+  , creationTime :: ZonedTime
   , campaignId :: CampaignId
   , landingPage :: LandingPage
   , ip :: Maybe Text
@@ -71,7 +65,7 @@ data Visit = Visit {
   , optInMethod :: OptInMethod
 } deriving (Show, Generic)
 
-instance PS.ToRow Visit where
+instance ToRow Visit where
   toRow d = [
       -- visit_id -- auto increamenting
       -- creation_time -- auto
@@ -86,8 +80,8 @@ instance PS.ToRow Visit where
     , toField (gatewayConnection d)
     , toField (optInMethod d)
     ]
-instance PS.FromRow Visit
+instance FromRow Visit
 
 -- we want to be able to A.decode visits
-instance A.ToJSON Visit
-instance A.FromJSON Visit
+instance ToJSON Visit
+instance FromJSON Visit

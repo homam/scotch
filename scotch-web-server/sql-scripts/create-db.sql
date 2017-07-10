@@ -3,6 +3,8 @@ CREATE TYPE gateway_notification_type AS ENUM ('SubscriptionNotification', 'Bill
 CREATE TYPE gateway_connection AS ENUM ('PayguruTurkey');
 CREATE TYPE opt_in_method as ENUM ('RedirectToPaymentPage');
 CREATE TYPE pixel_state as ENUM ('NotProcessed', 'Cancelled', 'Scrubbed', 'UrlGenerationFailed', 'FiredAndSucceed', 'FiredAndFailed', 'Delayed');
+CREATE Type handset_level as ENUM ('Any', 'LowEnd', 'MidLevel', 'HighEnd');
+CREATE TYPE gateway_operator as ENUM ('TR_AVEA', 'TR_TUCKCEL', 'TR_VODAFONE');
 
 
 
@@ -36,9 +38,9 @@ create TABLE pixels (
 , pixel_state pixel_state not null
 , pixel_url varchar(2048)
 , query_params json
-, pixel_value decimal
+, pixel_value_id int -- fk -- pixel_values.pixel_value_id
 , pixel_result_status_code int
-, pixel_resul_text varchar(2048)
+, pixel_result_text varchar(2048)
 );
 CREATE UNIQUE INDEX ON pixels (subscriber_id DESC);
 CREATE INDEX ON pixels (creation_time DESC);
@@ -52,20 +54,63 @@ CREATE INDEX ON pixels (pixel_state);
 
 ---
 create TABLE gateway_notifications (
-  gateway_notification_id bigserial CONSTRAINT gateway_notification_id PRIMARY KEY
-, creation_time timestamp with time zone not null default now()
-, all_params json not null
-, raw_path varchar(2048) not null
-, raw_query_string varchar(4096)
-, notification_type gateway_notification_type not null
-, gateway_connection gateway_connection not null
-, task_status async_task_status not null
-, task_result varchar(4096) null
-, task_last_updated_time timestamp with time zone null
+    gateway_notification_id bigserial CONSTRAINT gateway_notification_id PRIMARY KEY
+  , creation_time timestamp with time zone not null default now()
+  , all_params json not null
+  , raw_path varchar(2048) not null
+  , raw_query_string varchar(4096)
+  , notification_type gateway_notification_type not null
+  , gateway_connection gateway_connection not null
+  , task_status async_task_status not null
+  , task_result varchar(4096) null
+  , task_last_updated_time timestamp with time zone null
 );
 CREATE INDEX ON gateway_notifications (gateway_notification_id DESC);
 CREATE INDEX ON gateway_notifications (notification_type DESC);
 CREATE INDEX ON gateway_notifications (gateway_connection DESC);
+
+
+
+CREATE TABLE pixel_values (
+    pixel_value_id serial CONSTRAINT pixel_value_id PRIMARY KEY
+  , creation_time timestamp with time zone not null default now()
+  , created_by varchar(64) -- user
+  , gateway_connection gateway_connection not null -- mandatory
+  , operator gateway_operator null
+  , affiliate_id varchar(32) null
+  , handset_level handset_level null
+  , hardcoded_value_description varchar(1024) null -- null means not hardcoded
+  , pixel_firing_ratio float not null -- 0 means all pixels get scrubbed, 1 means all will be fired
+  , pixel_value_url_rep json not null -- null means no pixel should be fired
+  , pixel_monetary_value decimal null -- null means unknown
+);
+
+CREATE UNIQUE INDEX ON pixel_values (
+    gateway_connection
+  , operator
+  , coalesce(affiliate_id, '')
+  , coalesce(handset_level, 'Any')
+  , coalesce(hardcoded_value_description, '')
+  , pixel_firing_ratio
+  , coalesce(pixel_monetary_value, -1)
+);
+
+-- TODO: get indexes from script
+-- TODO: validation test: every gateway_connection must have at least one pixel_value
+
+CREATE TABLE affiliates (
+  affiliate_id varchar(32) CONSTRAINT affiliate_id PRIMARY KEY
+, creation_time timestamp with time zone not null default now()
+, created_by varchar(64) -- user
+, pixel_url_template varchar(2048)
+);
+
+
+
+
+
+
+
 
 
 ---

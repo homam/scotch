@@ -39,8 +39,8 @@ import Scotch.DB.QueryHelpers (defaultTime)
 import Scotch.DB.Types.GatewayConnection
 import qualified Web.Scotty as Scotty
 
-makePixel :: Int -> Maybe Int -> Text -> M.Map Text Text -> Maybe Decimal -> Pixel
-makePixel subscriberId visitId pixelUrl queryParams pixelValue = Pixel {
+makePixel :: Int -> Maybe Int -> Text -> M.Map Text Text -> Int -> Pixel
+makePixel subscriberId visitId pixelUrl queryParams pixelValueId = Pixel {
     creationTime = defaultTime
   , lastUpdated = Nothing
   , subscriberId
@@ -48,7 +48,7 @@ makePixel subscriberId visitId pixelUrl queryParams pixelValue = Pixel {
   , pixelState = NotProcessed
   , pixelUrl = Just pixelUrl
   , queryParams = Just queryParams
-  , pixelValue
+  , pixelValueId
   , pixelResultStatusCode = Nothing
   , pixelResultText = Nothing
   }
@@ -74,7 +74,7 @@ data Pixel = Pixel {
   , pixelState :: PixelState
   , pixelUrl :: Maybe Text
   , queryParams :: Maybe (M.Map Text Text)
-  , pixelValue :: Maybe Decimal
+  , pixelValueId :: Int
   , pixelResultStatusCode :: Maybe Int
   , pixelResultText :: Maybe Text
   } deriving (Show, Generic)
@@ -88,16 +88,11 @@ instance PS.ToRow Pixel where
     , toField (pixelState d)
     , toField (pixelUrl d)
     , toField (queryParams d)
-    , toField (pixelValue d)
+    , toField (pixelValueId d)
     , toField (pixelResultStatusCode d)
     , toField (pixelResultText d)
     ]
 instance PS.FromRow Pixel
-
-instance A.ToJSON Decimal where
-  toJSON = A.toJSON . show
-instance A.FromJSON Decimal where
-  parseJSON = A.withText "String" (return . read . unpack)
 
 -- we want to be able to A.decode visits
 instance A.ToJSON Pixel
@@ -122,7 +117,7 @@ addPixel v conn = head <$> PS.query
     , pixel_state
     , pixel_url
     , query_params
-    , pixel_value
+    , pixel_value_id
     , pixel_result_status_code
     , pixel_resul_text
     )

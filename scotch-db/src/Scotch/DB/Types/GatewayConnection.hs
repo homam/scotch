@@ -16,9 +16,6 @@ import Scotch.DB.FieldParserHelpers ()
 import Scotch.DB.ParsableHelpers ()
 import Data.Text.Lazy (toLower, concat, pack)
 import qualified Web.Scotty as Scotty
-import Database.PostgreSQL.Simple.ToField (ToField(..))
-import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(..))
-import qualified Data.ByteString.Lazy as BL
 
 data GatewayConnection = PayguruTurkey | TestStandard
   deriving (Show, Read, Eq, Ord, Generic, Enum, Bounded)
