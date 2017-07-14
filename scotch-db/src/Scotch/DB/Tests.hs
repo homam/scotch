@@ -11,7 +11,7 @@
 
 module Scotch.DB.Tests(
     someFunc
-  , Operator (..)
+  , GatewayOperator (..)
   , AffiliateId (..)
   , Affiliate (..)
   , PixelValueUrlRepresentation (..)
@@ -31,7 +31,7 @@ import qualified Scotch.DB.Types.Pixel as Pixel
 import qualified Data.Map as M
 import Scotch.DB.QueryHelpers (myPool)
 import Scotch.DB.Types.GatewayConnection
-import Scotch.DB.Types.Operator (Operator(..))
+import Scotch.DB.Types.GatewayOperator (GatewayOperator(..))
 import Scotch.DB.Types.HandsetLevel (HandsetLevel(..))
 import Scotch.DB.Types.Affiliate
 import Scotch.DB.Types
@@ -71,7 +71,7 @@ someFunc = do
 
 
 
-pixelValue :: GatewayConnection -> Operator -> CampaignId -> HandsetLevel -> PixelValueUrlRepresentationGetter (Maybe (Affiliate, (Double, PixelValueUrlRepresentation)))
+pixelValue :: GatewayConnection -> GatewayOperator -> CampaignId -> HandsetLevel -> PixelValueUrlRepresentationGetter (Maybe (Affiliate, (Double, PixelValueUrlRepresentation)))
 pixelValue g o cid h = do
   c <- ask
   case M.lookup cid (campaignIdMap c) of
@@ -99,7 +99,7 @@ pixelValue g o cid h = do
 -- | Read-only configuration that is used in `pixelValue` function.
 data PixelValueUrlRepresentationConfig = PixelValueUrlRepresentationConfig {
     campaignIdMap :: M.Map CampaignId Affiliate
-  , pixelMap :: M.Map (GatewayConnection, Maybe Operator, Maybe AffiliateId, Maybe HandsetLevel) (Maybe (Double, PixelValueUrlRepresentation))
+  , pixelMap :: M.Map (GatewayConnection, Maybe GatewayOperator, Maybe AffiliateId, Maybe HandsetLevel) (Maybe (Double, PixelValueUrlRepresentation))
   }
 
 newtype PixelValueUrlRepresentationGetter a = PixelValueUrlRepresentationGetter {

@@ -11,43 +11,60 @@
 module Scotch.DB.Types.PixelValue (
     pixelValue
   , addNewPixelValueDB
+  , PixelValueId (..)
+  , PixelValueUrlRepresentationConfig (..)
+  , pixelUrl
+  , HandsetLevel (..)
+  , dbToPixelValue -- maybe ?
 ) where
 
 import Prelude hiding (concat)
 import qualified Data.Map as M
 import Scotch.DB.Types.Imports
-import Scotch.DB.Types.Operator (Operator)
+import Scotch.DB.Types.GatewayOperator (GatewayOperator)
 import Scotch.DB.Types.GatewayConnection
-import Scotch.DB.Types.Affiliate (Affiliate, AffiliateId (..), PixelValueUrlRepresentation (..), HandsetLevel (..))
+import Scotch.DB.Types.Affiliate (Affiliate, getPixelUrl, AffiliateId (..), PixelValueUrlRepresentation (..), HandsetLevel (..))
 import qualified Scotch.DB.Types.Affiliate as AF
 import Scotch.DB.Types (CampaignId)
 -- import Scotch.DB.Types.Affiliate (AffiliateId, HandsetLevel, PixelValueUrlRepresentation)
 
-import Scotch.DB.FieldParserHelpers
+import Scotch.DB.FieldParserHelpers ()
 import Data.Maybe (fromMaybe)
-import Data.Text.Lazy (pack, concat)
-import qualified Data.ByteString.Char8 as Char8
+import Data.Text.Lazy (pack, concat, toStrict)
+import qualified Data.Text as T
 import Control.Monad.Reader (MonadReader, ask, Reader, runReader)
-import Control.Monad.Trans.Except (ExceptT, throwE     )
+import Control.Monad.Trans.Except (ExceptT, throwE, runExceptT)
 import Control.Monad.Except (MonadError)
 
 -- | Read-only configuration that is used in `pixelValue` function.
 data PixelValueUrlRepresentationConfig = PixelValueUrlRepresentationConfig {
     campaignIdMap :: M.Map CampaignId Affiliate
-  , pixelMap :: M.Map (GatewayConnection, Maybe Operator, Maybe AffiliateId, Maybe HandsetLevel) (Maybe PixelValueDB)
-  }
+  , pixelMap :: M.Map (GatewayConnection, Maybe GatewayOperator, Maybe AffiliateId, Maybe HandsetLevel) (Maybe PixelValue)
+  } deriving (Show)
 
 newtype PixelValueUrlRepresentationGetter a = PixelValueUrlRepresentationGetter {
     unPixelValueUrlRepresentationGetter :: ExceptT Text (Reader PixelValueUrlRepresentationConfig) a
   } deriving (Functor, Applicative, Monad, MonadReader PixelValueUrlRepresentationConfig, MonadError Text)
 
+runPixelValueUrlRepresentationGetter = runReader . runExceptT . unPixelValueUrlRepresentationGetter
 
-pixelValue :: GatewayConnection -> Operator -> CampaignId -> HandsetLevel -> PixelValueUrlRepresentationGetter (Maybe (Affiliate, PixelValue))
+pixelUrl :: GatewayConnection -> GatewayOperator -> CampaignId -> HandsetLevel -> PixelValueUrlRepresentationConfig -> QueryString -> Either T.Text (Maybe (PixelValueId, Double, T.Text))
+pixelUrl g o cid h = pixelUrl' $ pixelValue g o cid h
+
+pixelUrl' :: PixelValueUrlRepresentationGetter (Maybe (Affiliate, PixelValue)) -> PixelValueUrlRepresentationConfig -> QueryString -> Either T.Text (Maybe (PixelValueId, Double, T.Text))
+pixelUrl' getter config visitQueryString =
+  case runPixelValueUrlRepresentationGetter getter config of
+    Left e -> Left (toStrict e)
+    Right mpv -> Right $ fmap go mpv
+  where
+    go (affiliate, (pixelValueId, probability, pixelValue)) = (pixelValueId, probability, getPixelUrl affiliate visitQueryString pixelValue)
+
+pixelValue :: GatewayConnection -> GatewayOperator -> CampaignId -> HandsetLevel -> PixelValueUrlRepresentationGetter (Maybe (Affiliate, PixelValue))
 pixelValue g o cid h = do
   c <- ask
   case M.lookup cid (campaignIdMap c) of
     Nothing -> PixelValueUrlRepresentationGetter $ throwE $ concat ["No affiliate was found for CampaignId = ", pack $ show cid]
-    Just aff -> return $ (aff, ) <$> runReader (go g o (AF.affiliateId aff) h) (M.map (fmap dbToPixelValue) $ pixelMap c)
+    Just aff -> return $ (aff, ) <$> runReader (go g o (AF.affiliateId aff) h) ( pixelMap c)
     where
       -- hardcoded rules
       -- go PayguruTurkey TR_AVEA (AffiliateId "BillyMob") _ = return $ Just (PixelValueId 101, 1, DecimalPixelValueUrlRepresentation $ Decimal 2 110
@@ -66,6 +83,9 @@ pixelValue g o cid h = do
 
 newtype PixelValueId = PixelValueId Int
   deriving (Show, Read, Eq, Ord, Generic)
+
+instance ToJSON PixelValueId
+instance FromJSON PixelValueId
 
 instance ToField PixelValueId where
   toField (PixelValueId i) = toField i
@@ -105,7 +125,7 @@ data PixelValueDB = PixelValueDB {
   , creationTime :: ZonedTime -- automatic
   , createdBy :: Text -- mandatory
   , gatewayConnection :: GatewayConnection -- mandatory
-  , operator :: Maybe Operator -- null means any
+  , operator :: Maybe GatewayOperator -- null means any
   , affiliateId :: Maybe AffiliateId -- null means any
   , handsetLevel :: Maybe HandsetLevel -- null means any
   , hardcodedValueDescription :: Maybe Text -- null means not hardcoded
@@ -118,7 +138,7 @@ data PixelValueDB = PixelValueDB {
 addNewPixelValueDB ::
  Text ->
  GatewayConnection ->
- Maybe Operator ->
+ Maybe GatewayOperator ->
  Maybe AffiliateId ->
  Maybe HandsetLevel ->
  Maybe Text ->

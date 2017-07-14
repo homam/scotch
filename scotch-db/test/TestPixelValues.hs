@@ -13,7 +13,7 @@ import qualified Data.Time as Time
 import qualified Data.ByteString.Char8 as Char8
 import qualified Scotch.DB.Types.PixelValue as PV
 import Scotch.DB.QueryHelpers (myPool)
-import Scotch.DB.Types.Operator (Operator (..))
+import Scotch.DB.Types.GatewayOperator (GatewayOperator (..))
 import Scotch.DB.Types.GatewayConnection
 import Scotch.DB.Types.Affiliate (Affiliate, AffiliateId (..), PixelValueUrlRepresentation (..), HandsetLevel (..))
 import qualified Scotch.DB.Types.Affiliate as AF

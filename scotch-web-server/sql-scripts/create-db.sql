@@ -5,6 +5,7 @@ CREATE TYPE opt_in_method as ENUM ('RedirectToPaymentPage');
 CREATE TYPE pixel_state as ENUM ('NotProcessed', 'Cancelled', 'Scrubbed', 'UrlGenerationFailed', 'FiredAndSucceed', 'FiredAndFailed', 'Delayed');
 CREATE Type handset_level as ENUM ('Any', 'LowEnd', 'MidLevel', 'HighEnd');
 CREATE TYPE gateway_operator as ENUM ('TR_AVEA', 'TR_TUCKCEL', 'TR_VODAFONE');
+CREATE TYPE gateway_service as ENUM ('AppRing');
 
 
 
@@ -27,22 +28,34 @@ CREATE UNIQUE INDEX ON visits (visit_id DESC);
 CREATE INDEX ON visits (creation_time DESC);
 CREATE INDEX ON visits (campaign_id);
 CREATE INDEX ON visits (landing_page);
-CREATE INDEX ON visits (lower(ip_country));
+CREATE INDEX ON visits (lower(ip_couzntry));
+
+
+CREATE TABLE sales (
+    sales_id bigserial CONSTRAINT sales_id PRIMARY KEY
+  , creation_time timestamp with time zone not null default now()
+  , gateway gateway_connection not null
+  , operator gateway_operator not null
+  , service gateway_service not null
+  , is_active boolean not null
+  , unsubscription_time timestamp with time zone null
+  , visit_id bigint null
+);
+
 
 
 create TABLE pixels (
-  creation_time timestamp with time zone not null default now()
-, last_updated timestamp with time zone
-, subscriber_id bigint not null
-, visit_id bigint
-, pixel_state pixel_state not null
-, pixel_url varchar(2048)
-, query_params json
-, pixel_value_id int -- fk -- pixel_values.pixel_value_id
-, pixel_result_status_code int
-, pixel_result_text varchar(2048)
+    creation_time timestamp with time zone not null default now()
+  , last_updated timestamp with time zone
+  , sales_id bigint not null
+  , visit_id bigint
+  , pixel_state pixel_state not null
+  , pixel_url varchar(2048)
+  , pixel_value_id int -- fk -- pixel_values.pixel_value_id
+  , pixel_result_status_code int
+  , pixel_result_text varchar(2048)
 );
-CREATE UNIQUE INDEX ON pixels (subscriber_id DESC);
+CREATE UNIQUE INDEX ON pixels (sales_id DESC);
 CREATE INDEX ON pixels (creation_time DESC);
 CREATE INDEX ON pixels (pixel_state);
 

@@ -18,14 +18,17 @@ import Data.Maybe (fromMaybe)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as Char8
 import Data.Typeable.Internal (Typeable)
-import Data.Text.Lazy (Text)
 import Database.PostgreSQL.Simple.ToField (toField, ToField, Action)
 import Database.PostgreSQL.Simple.FromField (fromField, FromField, returnError, ResultError(..))
 import Database.PostgreSQL.Simple.Internal (Field, Conversion)
 import qualified Data.Aeson as A
+import Data.Aeson.Types
 import qualified Data.Map as M
 import Data.Decimal (Decimal)
 import Data.Text (unpack)
+import qualified Data.Text as T
+import qualified Data.CaseInsensitive as CI
+-- import qualified Data.Text.Encoding as Encoding
 
 instance ToField (M.Map String String) where
   toField = toField . A.toJSON
@@ -41,12 +44,31 @@ instance {-# OVERLAPPABLE #-} (A.FromJSONKey a, Ord a, A.FromJSON b) => FromFiel
 instance {-# OVERLAPPABLE #-} (A.ToJSONKey a, A.ToJSON b) => ToField (M.Map a b) where
   toField = toField . A.toJSON
 
-instance ToField (Text, Text) where
+instance ToField (T.Text, T.Text) where
   toField = toField . A.toJSON
 
-instance FromField (Text, Text) where
+instance FromField (T.Text, T.Text) where
   fromField _ Nothing = return ("","")
   fromField _ (Just bs) = return $ fromMaybe ("", "") (A.decode $ BL.fromStrict bs)
+
+instance ToField (CI.CI T.Text) where
+  toField = toField . T.toLower . CI.original
+
+instance A.ToJSON (CI.CI T.Text) where
+  toJSON = toJSON . T.toLower . CI.original
+
+instance A.FromJSON (CI.CI T.Text) where
+  parseJSON = withText "Text" (\t -> CI.mk <$> pure t)
+
+instance A.ToJSONKey (CI.CI T.Text) where
+  toJSONKey = toJSONKeyText (T.toLower . CI.original)
+
+instance A.FromJSONKey (CI.CI T.Text) where
+  fromJSONKey = FromJSONKeyText CI.mk
+
+-- instance FromField (CI.CI Text) where
+--   fromField f Nothing = returnError UnexpectedNull f ""
+--   fromField f (Just bs) = return (CI.mk $ Encoding.decodeUtf8 $ BL.fromStrict bs)
 
 instance {-# OVERLAPPABLE #-} A.FromJSON a => FromField [a] where
   fromField _ Nothing = return []

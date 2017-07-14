@@ -11,6 +11,7 @@ module Scotch.DB.QueryHelpers (
   , runQuery
   , tryRunQuery
   , defaultTime
+  , safeHead
 ) where
 
 import qualified Data.Pool as P
@@ -50,6 +51,10 @@ myPool connectionString = P.createPool (PS.connectPostgreSQL connectionString) P
 
 defaultTime :: Time.ZonedTime
 defaultTime = Time.utcToZonedTime (Time.minutesToTimeZone 120) $ Time.UTCTime (Time.fromGregorian 2017 1 1) 0
+
+safeHead :: [a] -> Maybe a
+safeHead (x:_) = Just x
+safeHead [] = Nothing
 
 -- Usage example:
 -- > main = do

@@ -15,12 +15,15 @@ where
 import Prelude hiding (concat)
 import Scotch.DB.FieldParserHelpers ()
 import Scotch.DB.ParsableHelpers ()
-import Data.Text.Lazy (Text, fromStrict, unpack)
+import Data.Text.Lazy (Text, toStrict, fromStrict, unpack)
 import Database.PostgreSQL.Simple.ToField (toField, ToField)
 import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(..))
 import qualified Data.Text.Encoding as Encoding
 import GHC.Generics (Generic)
 import qualified Data.Aeson as A
+import qualified Data.Map as M
+import qualified Data.CaseInsensitive as CI
+import qualified Data.Text as T
 
 
 newtype LandingPage = LandingPage Text deriving (Show, Read, Generic)
@@ -75,3 +78,17 @@ data OptInMethod = RedirectToPaymentPage
 
 instance A.ToJSON OptInMethod
 instance A.FromJSON OptInMethod
+
+
+type QueryString = M.Map (CI.CI T.Text) T.Text
+
+queryStringFromMap :: M.Map T.Text T.Text -> QueryString
+queryStringFromMap = M.mapKeys (CI.mk . clean)
+  where
+    clean k = if T.isPrefixOf "?" k then T.tail k else k
+
+queryStringFromLazyMap :: M.Map Text Text -> QueryString
+queryStringFromLazyMap = queryStringFromMap . M.mapKeys toStrict . M.map toStrict
+
+queryStringToMap :: QueryString -> M.Map T.Text T.Text
+queryStringToMap = M.mapKeys (T.toLower . CI.original)

@@ -16,7 +16,7 @@ module Scotch.DB.Types.Affiliate (
 ) where
 
 import Scotch.DB.Types.Imports
-import Scotch.DB.Types.Operator (Operator)
+import Scotch.DB.Types.GatewayOperator (GatewayOperator)
 import qualified Data.Text as T
 import qualified Data.Map as M
 import Data.Decimal (Decimal)
@@ -29,7 +29,7 @@ newtype AffiliateId = AffiliateId String
 
 -- | Affiliates are instances of this type
 data Affiliate = Affiliate {
-    getPixelUrl :: M.Map T.Text T.Text -> PixelValueUrlRepresentation -> T.Text
+    getPixelUrl :: QueryString -> PixelValueUrlRepresentation -> T.Text
   , affiliateId :: AffiliateId
   }
 
@@ -50,7 +50,7 @@ standardAffiliate affId turl = Affiliate {
 -- | Represents different ways of representing the value of the pixel in the URL
 data PixelValueUrlRepresentation =
     DecimalPixelValueUrlRepresentation Decimal -- ^ Value of pixel is represneted by a decimal number in the URL
-  | PerOperatorPixelValueUrlRepresentation Operator -- ^ Value is represented by the name of the operator on the URL
+  | PerOperatorPixelValueUrlRepresentation GatewayOperator -- ^ Value is represented by the name of the operator on the URL
   | ParametricPixelValueUrlRepresentation (M.Map T.Text T.Text) -- ^ Customizable
   | NoPixelValueUrlRepresentation -- ^ Pixel value is not represented in the URL
   deriving (Show, Read, Eq, Generic)
@@ -64,18 +64,19 @@ instance FromField PixelValueUrlRepresentation where
   fromField = fromFieldJSON
 
 -- | Converts a 'PixelValueUrlRepresentation' to a Map that can be used for constructing a URL
-pixelValueToMap :: PixelValueUrlRepresentation -> M.Map T.Text T.Text
-pixelValueToMap (DecimalPixelValueUrlRepresentation d) = M.fromList [("pixle_value", T.pack $ show d)]
-pixelValueToMap (PerOperatorPixelValueUrlRepresentation o) = M.fromList [("operator", T.pack $ show o)]
-pixelValueToMap (ParametricPixelValueUrlRepresentation m) = m
-pixelValueToMap NoPixelValueUrlRepresentation = M.empty
+pixelValueToMap :: PixelValueUrlRepresentation -> QueryString
+pixelValueToMap = queryStringFromMap . pixelValueToMap' where
+  pixelValueToMap' (DecimalPixelValueUrlRepresentation d) = M.fromList [("pixle_value", T.pack $ show d)]
+  pixelValueToMap' (PerOperatorPixelValueUrlRepresentation o) = M.fromList [("operator", T.pack $ show o)]
+  pixelValueToMap' (ParametricPixelValueUrlRepresentation m) = m
+  pixelValueToMap' NoPixelValueUrlRepresentation = M.empty
 
 -- | Utility function for formatting texts by mustache syntax: "{parameter}"
-formatText :: M.Map T.Text T.Text -> T.Text -> T.Text
+formatText :: QueryString -> T.Text -> T.Text
 formatText m t = foldl
   (\x (k, v) -> T.replace (T.concat ["{", k, "}"]) v x)
   t
-  (M.toList m)
+  (M.toList $ queryStringToMap m)
 
 data AffiliateDB = AffiliateDB {
     dbAffiliateId :: T.Text

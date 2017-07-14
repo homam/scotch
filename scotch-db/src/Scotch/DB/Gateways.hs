@@ -1,5 +1,6 @@
 module Scotch.DB.Gateways (
     AllGateways(..)
+  , getGateway
   , module Scotch.DB.IsGateway
   , module Scotch.DB.Gateways.PayGuruGateway
   , module Scotch.DB.Gateways.TestGateway
@@ -7,6 +8,7 @@ module Scotch.DB.Gateways (
 where
 
 import Scotch.DB.IsGateway
+import Scotch.DB.Types.GatewayConnection
 import Scotch.DB.Gateways.PayGuruGateway
 import Scotch.DB.Gateways.TestGateway
 
@@ -23,3 +25,7 @@ instance IsGateway AllGateways where
 
   identifier (PayGuru g) = identifier g
   identifier (Test g) = identifier g
+
+getGateway :: GatewayConnection -> AllGateways
+getGateway PayguruTurkey = PayGuru PayGuruGateway { payGuruEndPointUrl = "https://httpbin.org/get", payGuruUsername = "pguname" }
+getGateway TestStandard = Test TestGateway
